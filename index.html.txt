@@ -1,0 +1,1101 @@
+
+<!DOCTYPE html>
+
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0c0a09" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>⚽ CM 2026 — Concurs Pronosticuri</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚽%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS de pe CDN -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React + ReactDOM -->
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel ca să putem scrie JSX -->
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Fonturi -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    html, body { background: #0c0a09; color: #fafaf9; font-family: "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; min-height: 100vh; }
+    * { -webkit-tap-highlight-color: transparent; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+    @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
+    .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+    /* Scrollbar invizibil pentru filtrele orizontale */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- ===== CONFIGURARE JSONBIN — TREBUIE COMPLETATĂ! ===== -->
+
+  <script>
+    // ⚠️ ÎNAINTE DE A PUNE LA NETLIFY, COMPLETEAZĂ ACESTE 2 VALORI:
+    window.__WC26_CONFIG__ = {
+      // 1. Faci cont gratuit la https://jsonbin.io
+      // 2. Mergi la "API Keys" și copiezi cheia "X-MASTER-KEY"
+      JSONBIN_API_KEY: "PUNE_AICI_CHEIA_API",
+
+      // 3. Creezi un Bin nou (gol — pune doar "{}") și copiezi BIN ID-ul de sus
+      JSONBIN_BIN_ID: "PUNE_AICI_BIN_ID",
+    };
+  </script>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+    // ===== DATELE MECIURILOR — Faza Grupelor CM 2026 =====
+    const MATCHES = [
+      { n: 1, d: '11.06', t: '22:00', g: 'A', e1: 'Mexic', e2: 'Africa de Sud', f1: '🇲🇽', f2: '🇿🇦' },
+      { n: 2, d: '12.06', t: '05:00', g: 'A', e1: 'Coreea de Sud', e2: 'Cehia', f1: '🇰🇷', f2: '🇨🇿' },
+      { n: 3, d: '12.06', t: '22:00', g: 'B', e1: 'Canada', e2: 'Bosnia & H.', f1: '🇨🇦', f2: '🇧🇦' },
+      { n: 4, d: '13.06', t: '04:00', g: 'D', e1: 'SUA', e2: 'Paraguay', f1: '🇺🇸', f2: '🇵🇾' },
+      { n: 5, d: '13.06', t: '22:00', g: 'B', e1: 'Qatar', e2: 'Elveția', f1: '🇶🇦', f2: '🇨🇭' },
+      { n: 6, d: '14.06', t: '01:00', g: 'C', e1: 'Brazilia', e2: 'Maroc', f1: '🇧🇷', f2: '🇲🇦' },
+      { n: 7, d: '14.06', t: '04:00', g: 'C', e1: 'Haiti', e2: 'Scoția', f1: '🇭🇹', f2: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+      { n: 8, d: '14.06', t: '07:00', g: 'D', e1: 'Australia', e2: 'Turcia', f1: '🇦🇺', f2: '🇹🇷' },
+      { n: 9, d: '14.06', t: '20:00', g: 'E', e1: 'Germania', e2: 'Curaçao', f1: '🇩🇪', f2: '🇨🇼' },
+      { n: 10, d: '14.06', t: '23:00', g: 'F', e1: 'Olanda', e2: 'Japonia', f1: '🇳🇱', f2: '🇯🇵' },
+      { n: 11, d: '15.06', t: '02:00', g: 'E', e1: 'Coasta de Fildeș', e2: 'Ecuador', f1: '🇨🇮', f2: '🇪🇨' },
+      { n: 12, d: '15.06', t: '05:00', g: 'F', e1: 'Suedia', e2: 'Tunisia', f1: '🇸🇪', f2: '🇹🇳' },
+      { n: 13, d: '15.06', t: '19:00', g: 'H', e1: 'Spania', e2: 'Capul Verde', f1: '🇪🇸', f2: '🇨🇻' },
+      { n: 14, d: '15.06', t: '22:00', g: 'G', e1: 'Belgia', e2: 'Egipt', f1: '🇧🇪', f2: '🇪🇬' },
+      { n: 15, d: '16.06', t: '01:00', g: 'H', e1: 'Arabia Saudită', e2: 'Uruguay', f1: '🇸🇦', f2: '🇺🇾' },
+      { n: 16, d: '16.06', t: '04:00', g: 'G', e1: 'Iran', e2: 'Noua Zeelandă', f1: '🇮🇷', f2: '🇳🇿' },
+      { n: 17, d: '16.06', t: '22:00', g: 'I', e1: 'Franța', e2: 'Senegal', f1: '🇫🇷', f2: '🇸🇳' },
+      { n: 18, d: '17.06', t: '01:00', g: 'I', e1: 'Irak', e2: 'Norvegia', f1: '🇮🇶', f2: '🇳🇴' },
+      { n: 19, d: '17.06', t: '04:00', g: 'J', e1: 'Argentina', e2: 'Algeria', f1: '🇦🇷', f2: '🇩🇿' },
+      { n: 20, d: '17.06', t: '07:00', g: 'J', e1: 'Austria', e2: 'Iordania', f1: '🇦🇹', f2: '🇯🇴' },
+      { n: 21, d: '17.06', t: '20:00', g: 'K', e1: 'Portugalia', e2: 'RD Congo', f1: '🇵🇹', f2: '🇨🇩' },
+      { n: 22, d: '17.06', t: '23:00', g: 'L', e1: 'Anglia', e2: 'Croația', f1: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', f2: '🇭🇷' },
+      { n: 23, d: '18.06', t: '02:00', g: 'L', e1: 'Ghana', e2: 'Panama', f1: '🇬🇭', f2: '🇵🇦' },
+      { n: 24, d: '18.06', t: '05:00', g: 'K', e1: 'Uzbekistan', e2: 'Columbia', f1: '🇺🇿', f2: '🇨🇴' },
+      { n: 25, d: '18.06', t: '19:00', g: 'A', e1: 'Cehia', e2: 'Africa de Sud', f1: '🇨🇿', f2: '🇿🇦' },
+      { n: 26, d: '18.06', t: '22:00', g: 'B', e1: 'Elveția', e2: 'Bosnia & H.', f1: '🇨🇭', f2: '🇧🇦' },
+      { n: 27, d: '19.06', t: '01:00', g: 'B', e1: 'Canada', e2: 'Qatar', f1: '🇨🇦', f2: '🇶🇦' },
+      { n: 28, d: '19.06', t: '04:00', g: 'A', e1: 'Mexic', e2: 'Coreea de Sud', f1: '🇲🇽', f2: '🇰🇷' },
+      { n: 29, d: '19.06', t: '22:00', g: 'D', e1: 'SUA', e2: 'Australia', f1: '🇺🇸', f2: '🇦🇺' },
+      { n: 30, d: '20.06', t: '01:00', g: 'C', e1: 'Scoția', e2: 'Maroc', f1: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', f2: '🇲🇦' },
+      { n: 31, d: '20.06', t: '03:30', g: 'C', e1: 'Brazilia', e2: 'Haiti', f1: '🇧🇷', f2: '🇭🇹' },
+      { n: 32, d: '20.06', t: '06:00', g: 'D', e1: 'Turcia', e2: 'Paraguay', f1: '🇹🇷', f2: '🇵🇾' },
+      { n: 33, d: '20.06', t: '20:00', g: 'F', e1: 'Olanda', e2: 'Suedia', f1: '🇳🇱', f2: '🇸🇪' },
+      { n: 34, d: '20.06', t: '23:00', g: 'E', e1: 'Germania', e2: 'Coasta de Fildeș', f1: '🇩🇪', f2: '🇨🇮' },
+      { n: 35, d: '21.06', t: '03:00', g: 'E', e1: 'Ecuador', e2: 'Curaçao', f1: '🇪🇨', f2: '🇨🇼' },
+      { n: 36, d: '21.06', t: '07:00', g: 'F', e1: 'Tunisia', e2: 'Japonia', f1: '🇹🇳', f2: '🇯🇵' },
+      { n: 37, d: '21.06', t: '19:00', g: 'H', e1: 'Spania', e2: 'Arabia Saudită', f1: '🇪🇸', f2: '🇸🇦' },
+      { n: 38, d: '21.06', t: '22:00', g: 'G', e1: 'Belgia', e2: 'Iran', f1: '🇧🇪', f2: '🇮🇷' },
+      { n: 39, d: '22.06', t: '01:00', g: 'H', e1: 'Uruguay', e2: 'Capul Verde', f1: '🇺🇾', f2: '🇨🇻' },
+      { n: 40, d: '22.06', t: '04:00', g: 'G', e1: 'Noua Zeelandă', e2: 'Egipt', f1: '🇳🇿', f2: '🇪🇬' },
+      { n: 41, d: '22.06', t: '20:00', g: 'J', e1: 'Argentina', e2: 'Austria', f1: '🇦🇷', f2: '🇦🇹' },
+      { n: 42, d: '23.06', t: '00:00', g: 'I', e1: 'Franța', e2: 'Irak', f1: '🇫🇷', f2: '🇮🇶' },
+      { n: 43, d: '23.06', t: '03:00', g: 'I', e1: 'Norvegia', e2: 'Senegal', f1: '🇳🇴', f2: '🇸🇳' },
+      { n: 44, d: '23.06', t: '06:00', g: 'J', e1: 'Iordania', e2: 'Algeria', f1: '🇯🇴', f2: '🇩🇿' },
+      { n: 45, d: '23.06', t: '20:00', g: 'K', e1: 'Portugalia', e2: 'Uzbekistan', f1: '🇵🇹', f2: '🇺🇿' },
+      { n: 46, d: '23.06', t: '23:00', g: 'L', e1: 'Anglia', e2: 'Ghana', f1: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', f2: '🇬🇭' },
+      { n: 47, d: '24.06', t: '02:00', g: 'L', e1: 'Panama', e2: 'Croația', f1: '🇵🇦', f2: '🇭🇷' },
+      { n: 48, d: '24.06', t: '05:00', g: 'K', e1: 'Columbia', e2: 'RD Congo', f1: '🇨🇴', f2: '🇨🇩' },
+      { n: 49, d: '24.06', t: '22:00', g: 'B', e1: 'Elveția', e2: 'Canada', f1: '🇨🇭', f2: '🇨🇦' },
+      { n: 50, d: '24.06', t: '22:00', g: 'B', e1: 'Bosnia & H.', e2: 'Qatar', f1: '🇧🇦', f2: '🇶🇦' },
+      { n: 51, d: '25.06', t: '01:00', g: 'C', e1: 'Scoția', e2: 'Brazilia', f1: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', f2: '🇧🇷' },
+      { n: 52, d: '25.06', t: '01:00', g: 'C', e1: 'Maroc', e2: 'Haiti', f1: '🇲🇦', f2: '🇭🇹' },
+      { n: 53, d: '25.06', t: '04:00', g: 'A', e1: 'Cehia', e2: 'Mexic', f1: '🇨🇿', f2: '🇲🇽' },
+      { n: 54, d: '25.06', t: '04:00', g: 'A', e1: 'Africa de Sud', e2: 'Coreea de Sud', f1: '🇿🇦', f2: '🇰🇷' },
+      { n: 55, d: '25.06', t: '23:00', g: 'E', e1: 'Curaçao', e2: 'Coasta de Fildeș', f1: '🇨🇼', f2: '🇨🇮' },
+      { n: 56, d: '25.06', t: '23:00', g: 'E', e1: 'Ecuador', e2: 'Germania', f1: '🇪🇨', f2: '🇩🇪' },
+      { n: 57, d: '26.06', t: '02:00', g: 'F', e1: 'Japonia', e2: 'Suedia', f1: '🇯🇵', f2: '🇸🇪' },
+      { n: 58, d: '26.06', t: '02:00', g: 'F', e1: 'Tunisia', e2: 'Olanda', f1: '🇹🇳', f2: '🇳🇱' },
+      { n: 59, d: '26.06', t: '05:00', g: 'D', e1: 'Turcia', e2: 'SUA', f1: '🇹🇷', f2: '🇺🇸' },
+      { n: 60, d: '26.06', t: '05:00', g: 'D', e1: 'Paraguay', e2: 'Australia', f1: '🇵🇾', f2: '🇦🇺' },
+      { n: 61, d: '26.06', t: '22:00', g: 'I', e1: 'Norvegia', e2: 'Franța', f1: '🇳🇴', f2: '🇫🇷' },
+      { n: 62, d: '26.06', t: '22:00', g: 'I', e1: 'Senegal', e2: 'Irak', f1: '🇸🇳', f2: '🇮🇶' },
+      { n: 63, d: '27.06', t: '03:00', g: 'H', e1: 'Capul Verde', e2: 'Arabia Saudită', f1: '🇨🇻', f2: '🇸🇦' },
+      { n: 64, d: '27.06', t: '03:00', g: 'H', e1: 'Uruguay', e2: 'Spania', f1: '🇺🇾', f2: '🇪🇸' },
+      { n: 65, d: '27.06', t: '06:00', g: 'G', e1: 'Egipt', e2: 'Iran', f1: '🇪🇬', f2: '🇮🇷' },
+      { n: 66, d: '27.06', t: '06:00', g: 'G', e1: 'Noua Zeelandă', e2: 'Belgia', f1: '🇳🇿', f2: '🇧🇪' },
+      { n: 67, d: '28.06', t: '00:00', g: 'L', e1: 'Panama', e2: 'Anglia', f1: '🇵🇦', f2: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+      { n: 68, d: '28.06', t: '00:00', g: 'L', e1: 'Croația', e2: 'Ghana', f1: '🇭🇷', f2: '🇬🇭' },
+      { n: 69, d: '28.06', t: '02:30', g: 'K', e1: 'Columbia', e2: 'Portugalia', f1: '🇨🇴', f2: '🇵🇹' },
+      { n: 70, d: '28.06', t: '02:30', g: 'K', e1: 'RD Congo', e2: 'Uzbekistan', f1: '🇨🇩', f2: '🇺🇿' },
+      { n: 71, d: '28.06', t: '05:00', g: 'J', e1: 'Algeria', e2: 'Austria', f1: '🇩🇿', f2: '🇦🇹' },
+      { n: 72, d: '28.06', t: '05:00', g: 'J', e1: 'Iordania', e2: 'Argentina', f1: '🇯🇴', f2: '🇦🇷' },
+    ];
+
+    const DEFAULT_SCORING = { exact: 5, diff: 3, outcome: 2, wrong: 0 };
+    const DEFAULT_DEADLINE = '2026-06-11T20:00';
+
+    // ===== JSONBIN STORAGE =====
+    const CFG = window.__WC26_CONFIG__ || {};
+    const BIN_URL = `https://api.jsonbin.io/v3/b/${CFG.JSONBIN_BIN_ID}`;
+    const HEADERS = {
+      'Content-Type': 'application/json',
+      'X-Master-Key': CFG.JSONBIN_API_KEY,
+    };
+
+    function isStorageConfigured() {
+      return CFG.JSONBIN_API_KEY && CFG.JSONBIN_API_KEY !== '$2a$10$sf2Xz1HoWmAEoWT0kR2wYeMDlxVcUPrFcFiMRvLksrH1/eBymx6J6'
+          && CFG.JSONBIN_BIN_ID && CFG.JSONBIN_BIN_ID !== '69f0392e36566621a8fd3a84';
+    }
+
+    async function loadFromBin() {
+      if (!isStorageConfigured()) return null;
+      try {
+        const res = await fetch(`${BIN_URL}/latest`, { headers: HEADERS });
+        if (!res.ok) {
+          console.warn('Bin load failed:', res.status);
+          return null;
+        }
+        const data = await res.json();
+        return data.record || null;
+      } catch (e) {
+        console.error('Bin load error:', e);
+        return null;
+      }
+    }
+
+    async function saveToBin(record) {
+      if (!isStorageConfigured()) return false;
+      try {
+        const res = await fetch(BIN_URL, {
+          method: 'PUT',
+          headers: HEADERS,
+          body: JSON.stringify(record),
+        });
+        if (!res.ok) {
+          console.warn('Bin save failed:', res.status);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Bin save error:', e);
+        return false;
+      }
+    }
+
+    function calcPoints(pred, real, scoring) {
+      if (!pred || pred.g1 === '' || pred.g2 === '' || pred.g1 == null || pred.g2 == null) return null;
+      if (!real || real.g1 === '' || real.g2 === '' || real.g1 == null || real.g2 == null) return null;
+      const pg1 = +pred.g1, pg2 = +pred.g2, rg1 = +real.g1, rg2 = +real.g2;
+      if (pg1 === rg1 && pg2 === rg2) return scoring.exact;
+      if ((pg1 - pg2) === (rg1 - rg2)) return scoring.diff;
+      const ps = Math.sign(pg1 - pg2), rs = Math.sign(rg1 - rg2);
+      if (ps === rs) return scoring.outcome;
+      return scoring.wrong;
+    }
+
+    const groupColors = {
+      A: { bg: 'rgba(220, 38, 38, 0.15)', border: '#dc2626', text: '#fca5a5' },
+      B: { bg: 'rgba(234, 88, 12, 0.15)', border: '#ea580c', text: '#fdba74' },
+      C: { bg: 'rgba(202, 138, 4, 0.15)', border: '#ca8a04', text: '#fde047' },
+      D: { bg: 'rgba(101, 163, 13, 0.15)', border: '#65a30d', text: '#bef264' },
+      E: { bg: 'rgba(22, 163, 74, 0.15)', border: '#16a34a', text: '#86efac' },
+      F: { bg: 'rgba(13, 148, 136, 0.15)', border: '#0d9488', text: '#5eead4' },
+      G: { bg: 'rgba(8, 145, 178, 0.15)', border: '#0891b2', text: '#67e8f9' },
+      H: { bg: 'rgba(37, 99, 235, 0.15)', border: '#2563eb', text: '#93c5fd' },
+      I: { bg: 'rgba(124, 58, 237, 0.15)', border: '#7c3aed', text: '#c4b5fd' },
+      J: { bg: 'rgba(192, 38, 211, 0.15)', border: '#c026d3', text: '#f0abfc' },
+      K: { bg: 'rgba(219, 39, 119, 0.15)', border: '#db2777', text: '#f9a8d4' },
+      L: { bg: 'rgba(225, 29, 72, 0.15)', border: '#e11d48', text: '#fda4af' },
+    };
+
+    // ===== ICONS (mici SVG-uri inline ca să nu mai depindem de lucide) =====
+    const Icon = ({ d, size = 16, ...props }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        {d}
+      </svg>
+    );
+    const IconLock = (p) => <Icon size={p.size} d={<><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} {...p}/>;
+    const IconUnlock = (p) => <Icon size={p.size} d={<><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} {...p}/>;
+    const IconLogOut = (p) => <Icon size={p.size} d={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} {...p}/>;
+    const IconRefresh = (p) => <Icon size={p.size} d={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} {...p}/>;
+    const IconX = (p) => <Icon size={p.size} d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} {...p}/>;
+    const IconAlert = (p) => <Icon size={p.size} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} {...p}/>;
+    const IconCheck = (p) => <Icon size={p.size} d={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} {...p}/>;
+    const IconChevronDown = (p) => <Icon size={p.size} d={<polyline points="6 9 12 15 18 9"/>} {...p}/>;
+    const IconTrash = (p) => <Icon size={p.size} d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} {...p}/>;
+    const IconSave = (p) => <Icon size={p.size} d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} {...p}/>;
+    const IconEye = (p) => <Icon size={p.size} d={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>} {...p}/>;
+    const IconEyeOff = (p) => <Icon size={p.size} d={<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>} {...p}/>;
+    const IconTrophy = (p) => <Icon size={p.size} d={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} {...p}/>;
+    const IconUsers = (p) => <Icon size={p.size} d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...p}/>;
+    const IconCal = (p) => <Icon size={p.size} d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} {...p}/>;
+
+    // ===== TOAST =====
+    function Toast({ toast, onClose }) {
+      useEffect(() => {
+        if (!toast) return;
+        const id = setTimeout(onClose, toast.type === 'error' ? 4500 : 2500);
+        return () => clearTimeout(id);
+      }, [toast, onClose]);
+      if (!toast) return null;
+      const isErr = toast.type === 'error';
+      return (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-2 max-w-md w-full pointer-events-none">
+          <div className={`pointer-events-auto rounded-lg px-4 py-3 shadow-2xl backdrop-blur flex items-start gap-3 border ${isErr ? 'bg-red-950/95 border-red-500/40 text-red-100' : 'bg-emerald-950/95 border-emerald-500/40 text-emerald-100'}`} style={{ animation: 'slideDown 0.2s ease-out' }}>
+            {isErr ? <IconAlert size={18} className="shrink-0 mt-0.5" /> : <IconCheck size={18} className="shrink-0 mt-0.5" />}
+            <div className="flex-1 text-sm">{toast.message}</div>
+            <button onClick={onClose} className="text-stone-400 hover:text-white shrink-0"><IconX size={16} /></button>
+          </div>
+        </div>
+      );
+    }
+
+    function ConfirmDialog({ open, title, message, onConfirm, onCancel, danger }) {
+      if (!open) return null;
+      return (
+        <div className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onCancel}>
+          <div onClick={e => e.stopPropagation()} className="bg-stone-900 border border-stone-700 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="font-black tracking-widest text-lg mb-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.1em'}}>{title}</h3>
+            <p className="text-sm text-stone-300 mb-6">{message}</p>
+            <div className="flex gap-2">
+              <button onClick={onCancel} className="flex-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg font-bold text-sm transition">ANULEAZĂ</button>
+              <button onClick={onConfirm} className={`flex-1 py-2.5 font-black rounded-lg transition ${danger ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-400 hover:bg-amber-300 text-stone-950'}`} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.1em'}}>CONFIRMĂ</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ===== ECRAN ERORE CONFIGURARE =====
+    function ConfigErrorScreen() {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-stone-900 border border-red-500/30 rounded-xl p-6 sm:p-8">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h1 className="text-3xl font-black mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>CONFIGURARE INCOMPLETĂ</h1>
+            <p className="text-stone-300 mb-6">Aplicația nu este conectată la o bază de date. Înainte de a o folosi, trebuie să faci configurarea JSONBin (durează 2 minute).</p>
+
+            <div className="bg-stone-950/50 border border-stone-800 rounded-lg p-4 mb-4">
+              <div className="text-xs tracking-widest text-amber-400 font-mono mb-3">PAȘI:</div>
+              <ol className="space-y-2 text-sm text-stone-300 list-decimal list-inside">
+                <li>Mergi la <a href="https://jsonbin.io" target="_blank" className="text-amber-400 underline">jsonbin.io</a> și fă cont gratuit (cu Google sau email)</li>
+                <li>După login, du-te la <strong>API Keys</strong> și copiază valoarea <strong>X-MASTER-KEY</strong></li>
+                <li>Apoi du-te la <strong>Bins</strong> → <strong>Create Bin</strong> → pune doar <code className="bg-stone-800 px-1 rounded">{`{}`}</code> și salvează</li>
+                <li>Copiază <strong>BIN ID</strong>-ul (ce apare la URL după <code className="bg-stone-800 px-1 rounded">/b/</code>)</li>
+                <li>Deschide fișierul <code className="bg-stone-800 px-1 rounded">index.html</code> cu un editor de text și înlocuiește valorile <code className="bg-stone-800 px-1 rounded">PUNE_AICI_*</code> de sus</li>
+                <li>Reîncarcă pagina</li>
+              </ol>
+            </div>
+
+            <div className="text-xs text-stone-500 font-mono">După configurare, salvează fișierul, încarcă-l înapoi pe Netlify (drag-and-drop) și gata.</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ===== MAIN APP =====
+    function App() {
+      const [view, setView] = useState('home');
+      const [currentPlayer, setCurrentPlayer] = useState(null);
+      const [isAdmin, setIsAdmin] = useState(false);
+
+      const [config, setConfig] = useState({
+        adminPassword: '',
+        deadline: DEFAULT_DEADLINE,
+        scoring: DEFAULT_SCORING,
+        initialized: false,
+      });
+      const [players, setPlayers] = useState([]);
+      const [results, setResults] = useState({});
+      const [loading, setLoading] = useState(true);
+      const [savingState, setSavingState] = useState('');
+      const [toast, setToast] = useState(null);
+      const [confirmDlg, setConfirmDlg] = useState(null);
+
+      // We keep all state in one bin record
+      const stateRef = useRef({ config, players, results });
+
+      const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
+      const askConfirm = useCallback((title, message, onConfirm, danger = false) => setConfirmDlg({ title, message, onConfirm, danger }), []);
+
+      const loadState = useCallback(async () => {
+        const data = await loadFromBin();
+        if (data && typeof data === 'object') {
+          if (data.config) {
+            setConfig(prev => ({ ...prev, ...data.config }));
+            stateRef.current.config = data.config;
+          }
+          if (Array.isArray(data.players)) {
+            setPlayers(data.players);
+            stateRef.current.players = data.players;
+          }
+          if (data.results && typeof data.results === 'object') {
+            setResults(data.results);
+            stateRef.current.results = data.results;
+          }
+        }
+        setLoading(false);
+      }, []);
+
+      useEffect(() => {
+        loadState();
+        const interval = setInterval(loadState, 30000);
+        return () => clearInterval(interval);
+      }, [loadState]);
+
+      // Salvează tot bin-ul (config + players + results)
+      const saveAll = async (partial) => {
+        const newState = {
+          config: partial.config ?? stateRef.current.config,
+          players: partial.players ?? stateRef.current.players,
+          results: partial.results ?? stateRef.current.results,
+        };
+        stateRef.current = newState;
+        setSavingState('saving');
+        const ok = await saveToBin(newState);
+        setSavingState(ok ? 'saved' : '');
+        if (!ok) showToast('Eroare la salvare. Verifică conexiunea și reîncearcă.', 'error');
+        setTimeout(() => setSavingState(''), 1500);
+        return ok;
+      };
+
+      const saveConfig = async (newCfg) => {
+        setConfig(newCfg);
+        return saveAll({ config: newCfg });
+      };
+      const savePlayers = async (newPlayers) => {
+        setPlayers(newPlayers);
+        return saveAll({ players: newPlayers });
+      };
+      const saveResults = async (newResults) => {
+        setResults(newResults);
+        return saveAll({ results: newResults });
+      };
+
+      const isLocked = useMemo(() => {
+        if (!config.deadline) return false;
+        const d = new Date(config.deadline);
+        if (isNaN(d.getTime())) return false;
+        return new Date() >= d;
+      }, [config.deadline]);
+
+      const standings = useMemo(() => {
+        const arr = players.map(p => {
+          let total = 0, exact = 0, diff = 0, outcome = 0, wrong = 0, played = 0;
+          for (const m of MATCHES) {
+            const pred = p.predictions?.[m.n];
+            const real = results[m.n];
+            const pts = calcPoints(pred, real, config.scoring);
+            if (pts == null) continue;
+            played++; total += pts;
+            if (pts === config.scoring.exact) exact++;
+            else if (pts === config.scoring.diff) diff++;
+            else if (pts === config.scoring.outcome) outcome++;
+            else wrong++;
+          }
+          return { name: p.name, total, exact, diff, outcome, wrong, played };
+        });
+        return arr.sort((a, b) => b.total - a.total || b.exact - a.exact || b.diff - a.diff);
+      }, [players, results, config.scoring]);
+
+      if (!isStorageConfigured()) return <ConfigErrorScreen />;
+
+      if (loading) {
+        return (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-stone-400 font-mono text-sm tracking-widest animate-pulse">SE ÎNCARCĂ...</div>
+          </div>
+        );
+      }
+
+      if (!config.initialized) {
+        return <>
+          <SetupView onSave={async (cfg) => {
+            await saveConfig({ ...cfg, initialized: true });
+            setIsAdmin(true);
+            setView('admin');
+            showToast('Concursul a fost inițializat! 🎉');
+          }} showToast={showToast} />
+          <Toast toast={toast} onClose={() => setToast(null)} />
+        </>;
+      }
+
+      return (
+        <div className="min-h-screen text-stone-100" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, rgba(220, 38, 38, 0.15), transparent 60%), radial-gradient(ellipse 60% 80% at 100% 100%, rgba(37, 99, 235, 0.1), transparent 60%), linear-gradient(180deg, #0c0a09 0%, #0c0a09 100%)` }}>
+          <Header view={view} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} isLocked={isLocked} savingState={savingState} onRefresh={loadState} />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
+            {view === 'home' && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayers={savePlayers} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
+            {view === 'predict' && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} updatePlayer={(updated) => { const newPlayers = players.map(p => p.name === updated.name ? updated : p); setCurrentPlayer(updated); savePlayers(newPlayers); }} />}
+            {view === 'leaderboard' && <LeaderboardView standings={standings} players={players} results={results} scoring={config.scoring} />}
+            {view === 'admin' && isAdmin && <AdminView config={config} results={results} saveConfig={saveConfig} saveResults={saveResults} players={players} savePlayers={savePlayers} showToast={showToast} askConfirm={askConfirm} />}
+          </main>
+          <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
+            <span style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 16, letterSpacing: '0.1em'}}>WC26 PREDICTOR</span>
+            <span className="mx-3 text-stone-700">·</span>
+            72 MECIURI · GRUPELE A-L · 11–28 IUNIE 2026
+          </footer>
+          <Toast toast={toast} onClose={() => setToast(null)} />
+          <ConfirmDialog open={!!confirmDlg} title={confirmDlg?.title} message={confirmDlg?.message} danger={confirmDlg?.danger}
+            onConfirm={() => { confirmDlg?.onConfirm(); setConfirmDlg(null); }} onCancel={() => setConfirmDlg(null)} />
+        </div>
+      );
+    }
+
+    function Header({ view, setView, currentPlayer, setCurrentPlayer, isAdmin, isLocked, savingState, onRefresh }) {
+      return (
+        <header className="sticky top-0 z-50 backdrop-blur-xl bg-stone-950/80 border-b border-stone-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16 gap-4">
+              <button onClick={() => setView('home')} className="flex items-center gap-3 group">
+                <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-amber-500 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <span className="text-stone-950 font-black text-lg">⚽</span>
+                </div>
+                <div className="text-left">
+                  <div className="font-black tracking-tight leading-none text-base sm:text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.05em'}}>
+                    CUPA MONDIALĂ <span className="text-amber-400">'26</span>
+                  </div>
+                  <div className="text-[10px] text-stone-500 tracking-[0.25em] font-mono mt-0.5">PREDICTOR</div>
+                </div>
+              </button>
+              <nav className="hidden md:flex items-center gap-1">
+                <NavBtn active={view==='home'} onClick={() => setView('home')}>ACASĂ</NavBtn>
+                {currentPlayer && <NavBtn active={view==='predict'} onClick={() => setView('predict')}>PRONOSTICURI</NavBtn>}
+                <NavBtn active={view==='leaderboard'} onClick={() => setView('leaderboard')}>CLASAMENT</NavBtn>
+                {isAdmin && <NavBtn active={view==='admin'} onClick={() => setView('admin')}>ADMIN</NavBtn>}
+              </nav>
+              <div className="flex items-center gap-2">
+                {savingState && <span className="hidden sm:inline-flex text-[10px] font-mono tracking-widest text-emerald-400 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20">{savingState === 'saving' ? '⏳ SALVEAZĂ' : '✓ SALVAT'}</span>}
+                <button onClick={onRefresh} className="p-2 text-stone-500 hover:text-stone-200 transition" title="Reîncarcă"><IconRefresh size={14} /></button>
+                <span className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest px-2.5 py-1.5 rounded-md border ${isLocked ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'}`}>
+                  {isLocked ? <IconLock size={11} /> : <IconUnlock size={11} />}
+                  {isLocked ? 'BLOCAT' : 'DESCHIS'}
+                </span>
+                {currentPlayer && <button onClick={() => { setCurrentPlayer(null); setView('home'); }} className="p-2 text-stone-400 hover:text-white" title="Ieșire"><IconLogOut size={16} /></button>}
+              </div>
+            </div>
+            <div className="md:hidden flex gap-1 pb-3 -mx-1 overflow-x-auto no-scrollbar">
+              <NavBtn active={view==='home'} onClick={() => setView('home')}>ACASĂ</NavBtn>
+              {currentPlayer && <NavBtn active={view==='predict'} onClick={() => setView('predict')}>PRONOSTICURI</NavBtn>}
+              <NavBtn active={view==='leaderboard'} onClick={() => setView('leaderboard')}>CLASAMENT</NavBtn>
+              {isAdmin && <NavBtn active={view==='admin'} onClick={() => setView('admin')}>ADMIN</NavBtn>}
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    function NavBtn({ active, onClick, children }) {
+      return <button onClick={onClick} className={`px-3 py-2 text-xs font-bold tracking-widest rounded-md transition-all whitespace-nowrap ${active ? 'bg-amber-400 text-stone-950' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`} style={{ fontFamily: '"Bebas Neue", sans-serif', letterSpacing: '0.15em', fontSize: 13 }}>{children}</button>;
+    }
+
+    const inputStyleObj = { width: '100%', background: 'rgba(15, 15, 17, 0.7)', border: '1px solid #44403c', borderRadius: '8px', padding: '12px 14px', color: '#fafaf9', fontSize: '16px', outline: 'none', transition: 'border-color 0.15s', fontFamily: '"DM Sans", system-ui, sans-serif', WebkitAppearance: 'none', appearance: 'none', boxSizing: 'border-box' };
+
+    function SetupView({ onSave, showToast }) {
+      const [pwd, setPwd] = useState('');
+      const [pwd2, setPwd2] = useState('');
+      const [deadline, setDeadline] = useState(DEFAULT_DEADLINE);
+      const [exact, setExact] = useState(5);
+      const [diff, setDiff] = useState(3);
+      const [outcome, setOutcome] = useState(2);
+      const [showPwd, setShowPwd] = useState(false);
+      const [errors, setErrors] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+
+      const submit = async () => {
+        const e = {};
+        if (!pwd || pwd.length < 4) e.pwd = 'Parola trebuie să aibă cel puțin 4 caractere';
+        if (pwd !== pwd2) e.pwd2 = 'Parolele nu se potrivesc';
+        if (!deadline) e.deadline = 'Alege un deadline valid';
+        if (Object.keys(e).length) { setErrors(e); showToast('Verifică câmpurile marcate cu roșu', 'error'); return; }
+        setErrors({}); setSubmitting(true);
+        try {
+          await onSave({ adminPassword: pwd, deadline, scoring: { exact: +exact || 5, diff: +diff || 3, outcome: +outcome || 2, wrong: 0 } });
+        } catch (err) { showToast('A apărut o eroare. Încearcă din nou.', 'error'); setSubmitting(false); }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-xl w-full">
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">⚽</div>
+              <h1 className="text-4xl sm:text-5xl font-black mb-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.05em'}}>CUPA MONDIALĂ <span className="text-amber-400">'26</span></h1>
+              <div className="text-xs tracking-[0.3em] text-stone-500 font-mono">CONFIGURARE INIȚIALĂ</div>
+              <p className="text-sm text-stone-400 mt-4 max-w-md mx-auto">Tu ești organizatorul. Configurează concursul o dată, apoi trimite linkul colegilor.</p>
+            </div>
+            <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6 sm:p-8 space-y-6">
+              <div>
+                <Label>PAROLĂ ADMIN <span className="text-red-400">*</span></Label>
+                <div className="text-xs text-stone-500 mb-3">Cu ea introduci rezultatele meciurilor. NU o da nimănui.</div>
+                <div className="relative">
+                  <input type={showPwd ? 'text' : 'password'} value={pwd} onChange={e => { setPwd(e.target.value); setErrors(p => ({...p, pwd: null})); }} placeholder="min. 4 caractere" style={{...inputStyleObj, paddingRight: '40px', borderColor: errors.pwd ? '#dc2626' : '#44403c'}} autoComplete="new-password" autoCapitalize="off" autoCorrect="off" />
+                  <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300">{showPwd ? <IconEyeOff size={16} /> : <IconEye size={16} />}</button>
+                </div>
+                {errors.pwd && <div className="text-xs text-red-400 mt-1.5">⚠ {errors.pwd}</div>}
+                <input type={showPwd ? 'text' : 'password'} value={pwd2} onChange={e => { setPwd2(e.target.value); setErrors(p => ({...p, pwd2: null})); }} placeholder="confirmă parola" style={{...inputStyleObj, marginTop: '8px', borderColor: errors.pwd2 ? '#dc2626' : '#44403c'}} autoComplete="new-password" autoCapitalize="off" autoCorrect="off" />
+                {errors.pwd2 && <div className="text-xs text-red-400 mt-1.5">⚠ {errors.pwd2}</div>}
+              </div>
+              <div>
+                <Label>DEADLINE PRONOSTICURI</Label>
+                <div className="text-xs text-stone-500 mb-3">După această oră, jucătorii nu mai pot edita pronosticurile.</div>
+                <input type="datetime-local" value={deadline} onChange={e => { setDeadline(e.target.value); setErrors(p => ({...p, deadline: null})); }} style={{...inputStyleObj, borderColor: errors.deadline ? '#dc2626' : '#44403c'}} />
+                {errors.deadline && <div className="text-xs text-red-400 mt-1.5">⚠ {errors.deadline}</div>}
+                <div className="text-xs text-stone-500 mt-1.5 font-mono">Recomandat: 11 iunie, 20:00 (cu 2h înainte de primul meci)</div>
+              </div>
+              <div>
+                <Label>PUNCTAJE</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <ScoringInput label="Scor exact" value={exact} onChange={setExact} hint="2-1 → 2-1" color="amber" />
+                  <ScoringInput label="Diferență" value={diff} onChange={setDiff} hint="2-1 → 3-2" color="emerald" />
+                  <ScoringInput label="Rezultat 1X2" value={outcome} onChange={setOutcome} hint="2-1 → 4-0" color="sky" />
+                </div>
+              </div>
+              <button type="button" onClick={submit} disabled={submitting} className="w-full py-4 bg-amber-400 text-stone-950 font-black tracking-widest rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-60 active:bg-amber-500" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.2em', fontSize: 16, touchAction: 'manipulation'}}>
+                {submitting ? 'SE INIȚIALIZEAZĂ...' : '🚀 INIȚIALIZEAZĂ CONCURSUL'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Label({ children }) { return <div className="text-[11px] tracking-[0.25em] font-bold text-stone-400 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.2em', fontSize:12}}>{children}</div>; }
+
+    function ScoringInput({ label, value, onChange, hint, color }) {
+      const colors = { amber: { border: '#f59e0b', text: '#fcd34d' }, emerald: { border: '#10b981', text: '#6ee7b7' }, sky: { border: '#0ea5e9', text: '#7dd3fc' } };
+      return (
+        <div className="bg-stone-950/50 rounded-lg p-3 border border-stone-800">
+          <div className="text-[10px] text-stone-400 font-bold tracking-widest mb-1">{label}</div>
+          <input type="number" inputMode="numeric" min="0" max="20" value={value} onChange={e => onChange(e.target.value)} className="w-full bg-transparent rounded-md py-2 text-center text-2xl font-black outline-none" style={{fontFamily:'"Bebas Neue", sans-serif', WebkitAppearance:'none', border: `1px solid ${colors[color].border}`, color: colors[color].text}} />
+          <div className="text-[10px] text-stone-500 mt-1.5 font-mono text-center">{hint}</div>
+        </div>
+      );
+    }
+
+    function HomeView({ config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayers, isAdmin, setIsAdmin, adminPassword, showToast }) {
+      const [showLogin, setShowLogin] = useState(false);
+      const [showRegister, setShowRegister] = useState(false);
+      const [showAdminLogin, setShowAdminLogin] = useState(false);
+
+      const upcoming = MATCHES.find(m => {
+        const dateStr = `2026-${m.d.split('.').reverse().join('-')}T${m.t}:00`;
+        return new Date(dateStr) > new Date();
+      }) || MATCHES[0];
+
+      const deadlineDate = new Date(config.deadline);
+      const now = new Date();
+      const msLeft = deadlineDate - now;
+      const days = Math.max(0, Math.floor(msLeft / 86400000));
+      const hours = Math.max(0, Math.floor((msLeft % 86400000) / 3600000));
+      const minutes = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
+
+      return (
+        <div className="space-y-8">
+          <div className="relative overflow-hidden rounded-2xl border border-stone-800 bg-gradient-to-br from-stone-900 to-stone-950 p-6 sm:p-10">
+            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `radial-gradient(circle at 80% 20%, #fbbf24 0%, transparent 40%), radial-gradient(circle at 20% 80%, #dc2626 0%, transparent 40%)` }} />
+            <div className="relative">
+              <div className="text-xs tracking-[0.3em] text-amber-400 font-mono mb-3">⚽ FAZA GRUPELOR · 11–28 IUNIE 2026</div>
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black leading-[0.9] tracking-tight mb-4" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.02em'}}>
+                PARIAZĂ.<br/><span className="text-amber-400">CALCULEAZĂ.</span><br/><span className="text-stone-500">CÂȘTIGĂ.</span>
+              </h1>
+              <p className="text-stone-400 max-w-xl mt-4 text-sm sm:text-base leading-relaxed">
+                72 de meciuri din faza grupelor. {players.length} {players.length === 1 ? 'jucător înscris' : 'jucători înscriși'}.
+                {!isLocked && msLeft > 0 && <> Pronosticurile se închid pe <span className="text-stone-200 font-semibold">{deadlineDate.toLocaleString('ro-RO', {day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'})}</span>.</>}
+              </p>
+              {!isLocked && msLeft > 0 && (
+                <div className="mt-6 inline-flex gap-3 items-end">
+                  <CountdownPill value={days} label="ZILE" />
+                  <CountdownPill value={hours} label="ORE" />
+                  <CountdownPill value={minutes} label="MIN" />
+                </div>
+              )}
+              <div className="flex flex-wrap gap-3 mt-8">
+                {!currentPlayer && !isLocked && <>
+                  <button type="button" onClick={() => setShowRegister(true)} className="bg-amber-400 text-stone-950 px-5 py-3 rounded-lg font-bold hover:bg-amber-300 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em', fontSize:15}}>ÎNSCRIE-TE</button>
+                  <button type="button" onClick={() => setShowLogin(true)} className="border border-stone-700 px-5 py-3 rounded-lg font-bold hover:border-amber-400 hover:text-amber-400 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em', fontSize:15}}>AM DEJA CONT</button>
+                </>}
+                {!currentPlayer && isLocked && <button type="button" onClick={() => setShowLogin(true)} className="border border-stone-700 px-5 py-3 rounded-lg font-bold hover:border-amber-400 hover:text-amber-400 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em', fontSize:15}}>INTRĂ ÎN CONT</button>}
+                {currentPlayer && <button type="button" onClick={() => setView('predict')} className="bg-amber-400 text-stone-950 px-5 py-3 rounded-lg font-bold hover:bg-amber-300 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em', fontSize:15}}>{isLocked ? 'VEZI PRONOSTICURI' : 'COMPLETEAZĂ PRONOSTICURI'} →</button>}
+                <button type="button" onClick={() => setView('leaderboard')} className="border border-stone-700 px-5 py-3 rounded-lg font-bold hover:border-amber-400 hover:text-amber-400 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em', fontSize:15}}>CLASAMENT</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InfoCard icon={<IconTrophy size={20} />} label="LIDER" value={standings[0]?.played > 0 ? standings[0].name : '—'} subValue={standings[0]?.played > 0 ? `${standings[0].total} pct` : 'încă nu sunt rezultate'} accent="amber" />
+            <InfoCard icon={<IconUsers size={20} />} label="JUCĂTORI" value={String(players.length)} subValue={isLocked ? 'pronosticuri închise' : 'mai poți înscrie până la deadline'} accent="sky" />
+            <InfoCard icon={<IconCal size={20} />} label="URMĂTORUL MECI" value={`${upcoming.f1} ${upcoming.e1} – ${upcoming.e2} ${upcoming.f2}`} subValue={`${upcoming.d} · ${upcoming.t} · Grupa ${upcoming.g}`} accent="red" />
+          </div>
+
+          <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
+            <div className="text-xs tracking-[0.25em] text-stone-500 font-mono mb-4">SISTEM DE PUNCTAJ</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <ScoringTile pts={config.scoring.exact} label="SCOR EXACT" desc="2-1 → 2-1" color="from-amber-500 to-orange-500" />
+              <ScoringTile pts={config.scoring.diff} label="DIFERENȚĂ" desc="2-1 → 3-2" color="from-emerald-500 to-teal-500" />
+              <ScoringTile pts={config.scoring.outcome} label="REZULTAT 1X2" desc="2-1 → 4-0" color="from-sky-500 to-blue-500" />
+              <ScoringTile pts={config.scoring.wrong} label="GREȘIT" desc="rezultat invers" color="from-stone-700 to-stone-800" />
+            </div>
+          </div>
+
+          {standings[0]?.played > 0 && (
+            <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs tracking-[0.25em] text-stone-500 font-mono">CLASAMENT TOP 5</div>
+                <button type="button" onClick={() => setView('leaderboard')} className="text-xs text-amber-400 hover:text-amber-300 font-mono tracking-widest">VEZI TOT →</button>
+              </div>
+              <div className="space-y-2">
+                {standings.slice(0, 5).map((s, i) => (
+                  <div key={s.name} className="flex items-center gap-4 py-2 border-b border-stone-800 last:border-0">
+                    <div className={`w-8 h-8 flex items-center justify-center rounded-md font-black ${i === 0 ? 'bg-amber-400 text-stone-950' : i === 1 ? 'bg-stone-300 text-stone-950' : i === 2 ? 'bg-orange-700 text-white' : 'bg-stone-800 text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif'}}>{i + 1}</div>
+                    <div className="flex-1 font-semibold">{s.name}</div>
+                    <div className="text-right">
+                      <div className="text-2xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div>
+                      <div className="text-[10px] text-stone-500 font-mono tracking-wider">PCT</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isAdmin && <div className="text-center pt-4"><button type="button" onClick={() => setShowAdminLogin(true)} className="text-xs text-stone-600 hover:text-stone-400 font-mono tracking-widest">🔐 AUTENTIFICARE ADMIN</button></div>}
+
+          {showRegister && <Modal onClose={() => setShowRegister(false)} title="ÎNSCRIERE NOUĂ"><RegisterForm players={players} showToast={showToast} onSubmit={async (name, password) => {
+            const newPlayer = { name, password, predictions: {} };
+            await savePlayers([...players, newPlayer]);
+            setCurrentPlayer(newPlayer); setShowRegister(false); setView('predict');
+            showToast(`Bun venit, ${name}! 🎯`);
+          }} /></Modal>}
+
+          {showLogin && <Modal onClose={() => setShowLogin(false)} title="AUTENTIFICARE JUCĂTOR"><LoginForm players={players} showToast={showToast} onSubmit={(player) => { setCurrentPlayer(player); setShowLogin(false); setView('predict'); showToast(`Salut, ${player.name}!`); }} /></Modal>}
+
+          {showAdminLogin && <Modal onClose={() => setShowAdminLogin(false)} title="ADMIN LOGIN"><AdminLoginForm adminPassword={adminPassword} showToast={showToast} onSubmit={() => { setIsAdmin(true); setShowAdminLogin(false); setView('admin'); showToast('Autentificare admin reușită'); }} /></Modal>}
+        </div>
+      );
+    }
+
+    function CountdownPill({ value, label }) {
+      return <div className="text-center"><div className="text-4xl sm:text-5xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{String(value).padStart(2, '0')}</div><div className="text-[9px] tracking-[0.3em] text-stone-500 font-mono mt-1">{label}</div></div>;
+    }
+
+    function InfoCard({ icon, label, value, subValue, accent }) {
+      const colors = { amber: 'text-amber-400', sky: 'text-sky-400', red: 'text-red-400' };
+      return <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-5"><div className={`flex items-center gap-2 mb-3 ${colors[accent]}`}>{icon}<div className="text-[10px] tracking-[0.25em] font-mono">{label}</div></div><div className="text-xl sm:text-2xl font-black mb-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.02em'}}>{value}</div><div className="text-xs text-stone-500">{subValue}</div></div>;
+    }
+
+    function ScoringTile({ pts, label, desc, color }) {
+      return <div className={`bg-gradient-to-br ${color} rounded-lg p-4 text-stone-950`}><div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{pts}</div><div className="text-[10px] tracking-[0.2em] font-bold mt-2">{label}</div><div className="text-[10px] mt-1 opacity-70 font-mono">{desc}</div></div>;
+    }
+
+    function RegisterForm({ players, onSubmit, showToast }) {
+      const [name, setName] = useState('');
+      const [pwd, setPwd] = useState('');
+      const [submitting, setSubmitting] = useState(false);
+      const submit = async () => {
+        const trimmed = name.trim();
+        if (trimmed.length < 2) { showToast('Numele trebuie să aibă cel puțin 2 caractere', 'error'); return; }
+        if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) { showToast('Există deja un jucător cu acest nume', 'error'); return; }
+        if (pwd.length < 3) { showToast('Parola trebuie să aibă cel puțin 3 caractere', 'error'); return; }
+        setSubmitting(true);
+        await onSubmit(trimmed, pwd);
+        setSubmitting(false);
+      };
+      return (
+        <div className="space-y-4">
+          <p className="text-sm text-stone-400">Alege un nume și o parolă personală. Le vei folosi pentru a accesa pronosticurile tale.</p>
+          <div><Label>NUMELE TĂU</Label><input value={name} onChange={e => setName(e.target.value)} placeholder="ex: Vlad" style={inputStyleObj} autoFocus autoCapitalize="words" autoCorrect="off" /></div>
+          <div><Label>PAROLĂ PERSONALĂ</Label><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="min. 3 caractere" style={inputStyleObj} onKeyDown={e => e.key==='Enter' && submit()} autoComplete="new-password" autoCapitalize="off" autoCorrect="off" /></div>
+          <button type="button" onClick={submit} disabled={submitting} className="w-full py-3 bg-amber-400 text-stone-950 font-black rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-60" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>{submitting ? 'SE ÎNSCRIE...' : 'ÎNSCRIE-MĂ →'}</button>
+        </div>
+      );
+    }
+
+    function LoginForm({ players, onSubmit, showToast }) {
+      const [name, setName] = useState('');
+      const [pwd, setPwd] = useState('');
+      const submit = () => {
+        const player = players.find(p => p.name.toLowerCase() === name.trim().toLowerCase() && p.password === pwd);
+        if (!player) { showToast('Nume sau parolă incorectă', 'error'); return; }
+        onSubmit(player);
+      };
+      return (
+        <div className="space-y-4">
+          <div><Label>NUMELE TĂU</Label><select value={name} onChange={e => setName(e.target.value)} style={inputStyleObj}><option value="">— alege —</option>{players.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}</select></div>
+          <div><Label>PAROLĂ</Label><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} style={inputStyleObj} onKeyDown={e => e.key==='Enter' && submit()} autoComplete="current-password" /></div>
+          <button type="button" onClick={submit} className="w-full py-3 bg-amber-400 text-stone-950 font-black rounded-lg hover:bg-amber-300 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>INTRĂ →</button>
+        </div>
+      );
+    }
+
+    function AdminLoginForm({ adminPassword, onSubmit, showToast }) {
+      const [pwd, setPwd] = useState('');
+      const submit = () => { if (pwd === adminPassword) onSubmit(); else showToast('Parolă incorectă', 'error'); };
+      return (
+        <div className="space-y-4">
+          <p className="text-sm text-stone-400">Parola admin pentru a introduce rezultatele meciurilor.</p>
+          <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="parola admin" style={inputStyleObj} autoFocus onKeyDown={e => e.key==='Enter' && submit()} autoComplete="current-password" />
+          <button type="button" onClick={submit} className="w-full py-3 bg-amber-400 text-stone-950 font-black rounded-lg hover:bg-amber-300 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>AUTENTIFICĂ-TE →</button>
+        </div>
+      );
+    }
+
+    function Modal({ children, onClose, title }) {
+      return (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+          <div onClick={e => e.stopPropagation()} className="bg-stone-900 border border-stone-700 rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-black tracking-widest text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>{title}</h2>
+              <button type="button" onClick={onClose} className="text-stone-500 hover:text-white p-2 -m-2"><IconX size={18} /></button>
+            </div>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function PredictView({ player, isLocked, results, scoring, updatePlayer }) {
+      const [filter, setFilter] = useState('all');
+      const [search, setSearch] = useState('');
+      const filtered = MATCHES.filter(m => {
+        if (filter !== 'all' && m.g !== filter) return false;
+        if (search && !`${m.e1} ${m.e2}`.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+      });
+      const completed = MATCHES.filter(m => { const p = player.predictions?.[m.n]; return p && p.g1 !== '' && p.g2 !== '' && p.g1 != null && p.g2 != null; }).length;
+      const updatePred = (matchN, field, value) => {
+        if (isLocked) return;
+        const v = value === '' ? '' : Math.max(0, Math.min(15, parseInt(value) || 0));
+        const newPreds = { ...player.predictions, [matchN]: { ...(player.predictions?.[matchN] || {}), [field]: v } };
+        updatePlayer({ ...player, predictions: newPreds });
+      };
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PRONOSTICURI · {player.name.toUpperCase()}</div>
+              <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.02em'}}>COMPLETEAZĂ-ȚI <span className="text-amber-400">SCORURILE</span></h2>
+              <p className="text-stone-400 mt-2 text-sm">
+                {isLocked ? <span className="text-red-400 inline-flex items-center gap-2"><IconLock size={14}/> Pronosticurile sunt închise. Poți doar consulta.</span>
+                : <>Completează pronosticuri pentru cele 72 de meciuri. <span className="text-amber-400 font-bold">{completed}/72</span> completate.</>}
+              </p>
+            </div>
+            {!isLocked && (
+              <div className="bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 min-w-[180px]">
+                <div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES</span><span>{Math.round(completed/72*100)}%</span></div>
+                <div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{width:`${completed/72*100}%`}}/></div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <input type="search" placeholder="caută echipă..." value={search} onChange={e => setSearch(e.target.value)} className="w-full sm:w-64 bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400" style={{fontSize:16}} />
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
+              <button type="button" onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 ${filter==='all' ? 'bg-amber-400 text-stone-950' : 'bg-stone-800 text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
+              {['A','B','C','D','E','F','G','H','I','J','K','L'].map(g => (
+                <button type="button" key={g} onClick={() => setFilter(g)} className={`px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 ${filter===g ? 'text-stone-950' : 'text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : 'transparent', border: `1px solid ${groupColors[g].border}`}}>GR. {g}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filtered.map(m => <MatchCard key={m.n} match={m} pred={player.predictions?.[m.n]} real={results[m.n]} scoring={scoring} isLocked={isLocked} onUpdate={updatePred} />)}
+          </div>
+          {filtered.length === 0 && <div className="text-center py-12 text-stone-500">Niciun meci găsit.</div>}
+        </div>
+      );
+    }
+
+    function MatchCard({ match, pred, real, scoring, isLocked, onUpdate }) {
+      const m = match;
+      const c = groupColors[m.g];
+      const points = calcPoints(pred, real, scoring);
+      const hasResult = real && real.g1 !== '' && real.g2 !== '' && real.g1 != null && real.g2 != null;
+      let pointBadge = null;
+      if (points != null) {
+        let bg = 'bg-stone-700 text-stone-300';
+        if (points === scoring.exact) bg = 'bg-amber-400 text-stone-950';
+        else if (points === scoring.diff) bg = 'bg-emerald-500 text-stone-950';
+        else if (points === scoring.outcome) bg = 'bg-sky-500 text-white';
+        pointBadge = <div className={`${bg} px-2 py-1 rounded text-xs font-black`} style={{fontFamily:'"Bebas Neue", sans-serif'}}>+{points} PCT</div>;
+      }
+      const inputBg = isLocked ? '#1c1917' : '#fef3c7';
+      const inputColor = isLocked ? '#fef3c7' : '#0c0a09';
+      const inputBorder = `2px solid ${isLocked ? '#44403c' : '#fbbf24'}`;
+      return (
+        <div className="rounded-xl border bg-stone-900/60 backdrop-blur p-4 transition" style={{borderColor: c.border + '60'}}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}40`}}>GR. {m.g}</span>
+              <span className="text-[10px] text-stone-500 font-mono tracking-widest">M{String(m.n).padStart(2,'0')}</span>
+            </div>
+            <div className="text-[10px] text-stone-400 font-mono tracking-wider">{m.d} · {m.t}</div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span>
+              <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span>
+              <input type="number" inputMode="numeric" min="0" max="15" value={pred?.g1 ?? ''} onChange={e => onUpdate(m.n, 'g1', e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:'none' }} />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span>
+              <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span>
+              <input type="number" inputMode="numeric" min="0" max="15" value={pred?.g2 ?? ''} onChange={e => onUpdate(m.n, 'g2', e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:'none' }} />
+            </div>
+          </div>
+          {hasResult && (
+            <div className="mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2"><div className="text-stone-500 font-mono tracking-widest text-[10px]">REZULTAT REAL</div><div className="font-black text-emerald-400" style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{real.g1} – {real.g2}</div></div>
+              {pointBadge}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function LeaderboardView({ standings, players, results, scoring }) {
+      const [showDetail, setShowDetail] = useState(null);
+      const matchesPlayed = MATCHES.filter(m => results[m.n] && results[m.n].g1 !== '' && results[m.n].g2 !== '' && results[m.n].g1 != null && results[m.n].g2 != null).length;
+      return (
+        <div className="space-y-6">
+          <div>
+            <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">CLASAMENT GENERAL</div>
+            <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.02em'}}>CINE-I <span className="text-amber-400">CEL MAI BUN?</span></h2>
+            <p className="text-stone-400 text-sm mt-2">{matchesPlayed}/72 meciuri jucate · {players.length} jucători înscriși</p>
+          </div>
+          {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă. Înscrieți-vă din pagina principală!</div>
+          : <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl overflow-hidden">
+              <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,100px] gap-2 px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-[10px] tracking-widest text-stone-500 font-mono">
+                <div>LOC</div><div>JUCĂTOR</div><div className="text-center">EXACTE</div><div className="text-center">DIFER.</div><div className="text-center">1X2</div><div className="text-center">GREȘ.</div><div className="text-right">TOTAL</div>
+              </div>
+              {standings.map((s, i) => {
+                const player = players.find(p => p.name === s.name);
+                return (
+                  <div key={s.name}>
+                    <button type="button" onClick={() => setShowDetail(showDetail === s.name ? null : s.name)} className={`w-full text-left px-4 py-4 border-b border-stone-800 last:border-0 hover:bg-stone-800/30 transition ${i === 0 && s.played > 0 ? 'bg-amber-400/5' : ''}`}>
+                      <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,100px] gap-2 items-center">
+                        <div><div className={`w-9 h-9 flex items-center justify-center rounded-md font-black ${i === 0 ? 'bg-amber-400 text-stone-950' : i === 1 ? 'bg-stone-300 text-stone-950' : i === 2 ? 'bg-orange-700 text-white' : 'bg-stone-800 text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div></div>
+                        <div className="flex items-center gap-2 min-w-0"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span className="text-lg">👑</span>}</div>
+                        <div className="text-center"><span className="text-amber-400 font-bold">{s.exact}</span></div>
+                        <div className="text-center"><span className="text-emerald-400 font-bold">{s.diff}</span></div>
+                        <div className="text-center"><span className="text-sky-400 font-bold">{s.outcome}</span></div>
+                        <div className="text-center"><span className="text-stone-500 font-bold">{s.wrong}</span></div>
+                        <div className="text-right flex items-center justify-end gap-2"><div className="text-3xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div><IconChevronDown size={14} className={`text-stone-500 transition ${showDetail === s.name ? 'rotate-180' : ''}`} /></div>
+                      </div>
+                      <div className="sm:hidden flex items-center gap-3">
+                        <div className={`w-10 h-10 flex items-center justify-center rounded-md font-black shrink-0 ${i === 0 ? 'bg-amber-400 text-stone-950' : i === 1 ? 'bg-stone-300 text-stone-950' : i === 2 ? 'bg-orange-700 text-white' : 'bg-stone-800 text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span>👑</span>}</div>
+                          <div className="text-[10px] text-stone-500 font-mono tracking-widest mt-0.5"><span className="text-amber-400">{s.exact}E</span><span className="mx-1.5">·</span><span className="text-emerald-400">{s.diff}D</span><span className="mx-1.5">·</span><span className="text-sky-400">{s.outcome}R</span></div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right"><div className="text-3xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div><div className="text-[9px] text-stone-500 font-mono tracking-widest mt-0.5">PCT</div></div>
+                          <IconChevronDown size={14} className={`text-stone-500 transition ${showDetail === s.name ? 'rotate-180' : ''}`} />
+                        </div>
+                      </div>
+                    </button>
+                    {showDetail === s.name && player && <PlayerDetail player={player} results={results} scoring={scoring} />}
+                  </div>
+                );
+              })}
+            </div>}
+        </div>
+      );
+    }
+
+    function PlayerDetail({ player, results, scoring }) {
+      return (
+        <div className="bg-stone-950/50 border-b border-stone-800 px-4 py-4">
+          <div className="text-xs tracking-widest font-mono text-stone-500 mb-3">PRONOSTICURILE LUI {player.name.toUpperCase()}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {MATCHES.map(m => {
+              const pred = player.predictions?.[m.n];
+              const real = results[m.n];
+              const pts = calcPoints(pred, real, scoring);
+              const c = groupColors[m.g];
+              let badge = '';
+              if (pts === scoring.exact) badge = 'bg-amber-400 text-stone-950';
+              else if (pts === scoring.diff) badge = 'bg-emerald-500 text-stone-950';
+              else if (pts === scoring.outcome) badge = 'bg-sky-500 text-white';
+              else if (pts === scoring.wrong) badge = 'bg-stone-700 text-stone-400';
+              return (
+                <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + '40'}}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[9px] font-mono text-stone-500">M{m.n}</span>
+                    <span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="font-mono font-bold text-stone-200">{pred?.g1 ?? '–'}-{pred?.g2 ?? '–'}</span>
+                    {real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}
+                    {pts != null && <span className={`${badge} px-1.5 rounded text-[10px] font-black`}>+{pts}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    function AdminView({ config, results, saveConfig, saveResults, players, savePlayers, showToast, askConfirm }) {
+      const [tab, setTab] = useState('results');
+      return (
+        <div className="space-y-6">
+          <div>
+            <div className="text-xs tracking-[0.25em] text-red-400 font-mono">🔐 PANOU ADMINISTRARE</div>
+            <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.02em'}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
+          </div>
+          <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
+            {[['results', '🥅 REZULTATE'], ['settings', '⚙️ SETĂRI'], ['players', '👥 JUCĂTORI']].map(([id, label]) => (
+              <button type="button" key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap ${tab===id ? 'border-b-2 border-amber-400 text-amber-400' : 'text-stone-500 hover:text-stone-300'}`} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>{label}</button>
+            ))}
+          </div>
+          {tab === 'results' && <AdminResults results={results} saveResults={saveResults} showToast={showToast} />}
+          {tab === 'settings' && <AdminSettings config={config} saveConfig={saveConfig} showToast={showToast} />}
+          {tab === 'players' && <AdminPlayers players={players} savePlayers={savePlayers} askConfirm={askConfirm} showToast={showToast} />}
+        </div>
+      );
+    }
+
+    function AdminResults({ results, saveResults, showToast }) {
+      const [filter, setFilter] = useState('all');
+      const [pendingResults, setPendingResults] = useState(results);
+      const [dirty, setDirty] = useState(false);
+      useEffect(() => { setPendingResults(results); setDirty(false); }, [results]);
+      const update = (n, field, value) => {
+        const v = value === '' ? '' : Math.max(0, Math.min(15, parseInt(value) || 0));
+        setPendingResults(prev => ({ ...prev, [n]: { ...(prev[n] || {}), [field]: v } }));
+        setDirty(true);
+      };
+      const save = async () => {
+        const clean = {};
+        for (const [k, v] of Object.entries(pendingResults)) {
+          if (v && v.g1 !== '' && v.g2 !== '' && v.g1 != null && v.g2 != null) clean[k] = { g1: +v.g1, g2: +v.g2 };
+        }
+        await saveResults(clean);
+        setDirty(false);
+        showToast('Rezultate salvate. Punctajele s-au actualizat.');
+      };
+      const filtered = MATCHES.filter(m => filter === 'all' || m.g === filter);
+      const completed = MATCHES.filter(m => pendingResults[m.n] && pendingResults[m.n].g1 !== '' && pendingResults[m.n].g2 !== '' && pendingResults[m.n].g1 != null && pendingResults[m.n].g2 != null).length;
+      return (
+        <div className="space-y-4">
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div><div className="font-bold text-emerald-300">📊 {completed}/72 meciuri completate</div><div className="text-xs text-stone-400 mt-1">Punctajele jucătorilor se actualizează automat după salvare.</div></div>
+            {dirty && <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-5 py-2.5 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}><IconSave size={14}/> SALVEAZĂ</button>}
+          </div>
+          <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
+            <button type="button" onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 ${filter==='all' ? 'bg-amber-400 text-stone-950' : 'bg-stone-800 text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
+            {['A','B','C','D','E','F','G','H','I','J','K','L'].map(g => (
+              <button type="button" key={g} onClick={() => setFilter(g)} className={`px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 ${filter===g ? 'text-stone-950' : 'text-stone-400'}`} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : 'transparent', border: `1px solid ${groupColors[g].border}`}}>GR. {g}</button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filtered.map(m => {
+              const r = pendingResults[m.n];
+              const c = groupColors[m.g];
+              return (
+                <div key={m.n} className="rounded-xl border bg-stone-900/60 p-4" style={{borderColor: c.border + '40'}}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text}}>GR. {m.g} · M{m.n}</span>
+                    <span className="text-[10px] text-stone-500 font-mono">{m.d} · {m.t}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span>
+                      <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span>
+                      <input type="number" inputMode="numeric" min="0" max="15" value={r?.g1 ?? ''} onChange={e => update(m.n, 'g1', e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:'#dcfce7', color:'#0c0a09', border:'2px solid #22c55e', WebkitAppearance:'none'}} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span>
+                      <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span>
+                      <input type="number" inputMode="numeric" min="0" max="15" value={r?.g2 ?? ''} onChange={e => update(m.n, 'g2', e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:'#dcfce7', color:'#0c0a09', border:'2px solid #22c55e', WebkitAppearance:'none'}} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {dirty && <div className="sticky bottom-4 flex justify-end">
+            <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shadow-2xl shadow-amber-500/30" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.2em'}}><IconSave size={16}/> SALVEAZĂ MODIFICĂRILE</button>
+          </div>}
+        </div>
+      );
+    }
+
+    function AdminSettings({ config, saveConfig, showToast }) {
+      const [scoring, setScoring] = useState(config.scoring);
+      const [deadline, setDeadline] = useState(config.deadline);
+      const [pwd, setPwd] = useState(config.adminPassword);
+      const save = async () => {
+        await saveConfig({ ...config, scoring: { ...scoring, wrong: 0 }, deadline, adminPassword: pwd });
+        showToast('Setări salvate cu succes!');
+      };
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-6 space-y-5">
+            <h3 className="font-black tracking-widest text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>PUNCTAJE</h3>
+            <div className="space-y-3">
+              <SettingsRow label="Scor exact" desc="2-1 → 2-1" value={scoring.exact} onChange={v => setScoring({...scoring, exact: +v || 0})} accent="amber" />
+              <SettingsRow label="Diferență de gol" desc="2-1 → 3-2" value={scoring.diff} onChange={v => setScoring({...scoring, diff: +v || 0})} accent="emerald" />
+              <SettingsRow label="Rezultat 1/X/2" desc="2-1 → 4-0" value={scoring.outcome} onChange={v => setScoring({...scoring, outcome: +v || 0})} accent="sky" />
+            </div>
+          </div>
+          <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-6 space-y-5">
+            <h3 className="font-black tracking-widest text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.15em'}}>DEADLINE & SECURITATE</h3>
+            <div><Label>DEADLINE PRONOSTICURI</Label><input type="datetime-local" value={deadline} onChange={e => setDeadline(e.target.value)} style={inputStyleObj} /><div className="text-xs text-stone-500 mt-1">După această oră jucătorii nu mai pot edita.</div></div>
+            <div><Label>PAROLĂ ADMIN</Label><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} style={inputStyleObj} autoComplete="new-password" /></div>
+          </div>
+          <button type="button" onClick={save} className="lg:col-span-2 bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center justify-center gap-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:'0.2em'}}><IconSave size={16}/> SALVEAZĂ SETĂRILE</button>
+        </div>
+      );
+    }
+
+    function SettingsRow({ label, desc, value, onChange, accent }) {
+      const colors = { amber: '#fbbf24', emerald: '#10b981', sky: '#0ea5e9' };
+      return (
+        <div className="flex items-center justify-between gap-3">
+          <div><div className="font-bold text-sm">{label}</div><div className="text-[11px] text-stone-500 font-mono">{desc}</div></div>
+          <input type="number" inputMode="numeric" min="0" max="20" value={value} onChange={e => onChange(e.target.value)} className="w-20 text-center rounded-md py-2 font-black text-xl bg-stone-950 border-2 outline-none" style={{fontFamily:'"Bebas Neue", sans-serif', borderColor: colors[accent], color: colors[accent], WebkitAppearance:'none'}} />
+        </div>
+      );
+    }
+
+    function AdminPlayers({ players, savePlayers, askConfirm, showToast }) {
+      const remove = (name) => {
+        askConfirm('ȘTERGE JUCĂTOR', `Sigur vrei să ștergi jucătorul "${name}"? Toate pronosticurile lui vor fi pierdute.`,
+          async () => { await savePlayers(players.filter(p => p.name !== name)); showToast(`Jucătorul "${name}" a fost șters.`); }, true);
+      };
+      return (
+        <div className="bg-stone-900/60 border border-stone-800 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-xs tracking-widest text-stone-500 font-mono">{players.length} JUCĂTORI ÎNSCRIȘI</div>
+          {players.length === 0 ? <div className="p-8 text-center text-stone-500">Niciun jucător încă.</div>
+          : players.map(p => {
+            const completed = MATCHES.filter(m => p.predictions?.[m.n] && p.predictions[m.n].g1 !== '' && p.predictions[m.n].g2 !== '' && p.predictions[m.n].g1 != null && p.predictions[m.n].g2 != null).length;
+            return (
+              <div key={p.name} className="px-4 py-3 border-b border-stone-800 last:border-0 flex items-center justify-between gap-4">
+                <div><div className="font-bold">{p.name}</div><div className="text-xs text-stone-500 font-mono">{completed}/72 pronosticuri · parolă: {'•'.repeat(p.password.length)}</div></div>
+                <button type="button" onClick={() => remove(p.name)} className="text-red-400 hover:text-red-300 p-2 rounded hover:bg-red-500/10" title="Șterge"><IconTrash size={16}/></button>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ===== MOUNT =====
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+
+</body>
+</html>
