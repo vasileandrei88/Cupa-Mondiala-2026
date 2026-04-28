@@ -1,0 +1,1 @@
+# Cupa-Mondiala-2026
