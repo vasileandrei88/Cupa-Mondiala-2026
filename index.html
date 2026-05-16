@@ -35,53 +35,27 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBZc9kTtnIfwYGSr9FUjlvciRqjklvWbw",
+      authDomain: "cm2026-pronosticuri-af76b.firebaseapp.com",
+      projectId: "cm2026-pronosticuri-af76b",
+      storageBucket: "cm2026-pronosticuri-af76b.firebasestorage.app",
+      messagingSenderId: "338711358612",
+      appId: "1:338711358612:web:4b196d5789959618339881"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.__FB__ = { db, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc };
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <script type="text/babel" data-presets="env,react">
     const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
-    // ========== CONFIG JSONBIN ==========
-    const JSONBIN_API_KEY = "$2a$10$Ql4au/hCKK7gezqUuKm/MOp7mYsJLJq8lAQSmPksOv5oFHdsqXRfe";
-    const JSONBIN_BIN_ID = "69f0392e36566621a8fd3a84";
-    const BIN_URL = "https://api.jsonbin.io/v3/b/" + JSONBIN_BIN_ID;
-
-    async function loadFromBin() {
-      try {
-        const res = await fetch(BIN_URL + "/latest", {
-          headers: { "X-Master-Key": JSONBIN_API_KEY }
-        });
-        if (!res.ok) {
-          console.warn("Bin load failed:", res.status);
-          return null;
-        }
-        const data = await res.json();
-        return data.record || null;
-      } catch (e) {
-        console.error("Bin load error:", e);
-        return null;
-      }
-    }
-
-    async function saveToBin(record) {
-      try {
-        const res = await fetch(BIN_URL, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": JSONBIN_API_KEY
-          },
-          body: JSON.stringify(record)
-        });
-        if (!res.ok) {
-          console.warn("Bin save failed:", res.status);
-          return false;
-        }
-        return true;
-      } catch (e) {
-        console.error("Bin save error:", e);
-        return false;
-      }
-    }
-
-    // ========== DATELE MECIURILOR ==========
     const MATCHES = [
       { n: 1, d: "11.06", t: "22:00", g: "A", e1: "Mexic", e2: "Africa de Sud", f1: "🇲🇽", f2: "🇿🇦" },
       { n: 2, d: "12.06", t: "05:00", g: "A", e1: "Coreea de Sud", e2: "Cehia", f1: "🇰🇷", f2: "🇨🇿" },
@@ -186,6 +160,22 @@
       L: { bg: "rgba(225, 29, 72, 0.15)", border: "#e11d48", text: "#fda4af" }
     };
 
+    function useFirebase() {
+      const [ready, setReady] = useState(!!window.__FB__);
+      useEffect(() => {
+        if (window.__FB__) { setReady(true); return; }
+        const h = () => setReady(true);
+        window.addEventListener("firebase-ready", h);
+        return () => window.removeEventListener("firebase-ready", h);
+      }, []);
+      return ready;
+    }
+
+    async function fbSaveConfig(cfg) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "config"), cfg); }
+    async function fbSaveResults(r) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "results"), r); }
+    async function fbSavePlayer(p) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "players", p.name.toLowerCase()), p); }
+    async function fbDeletePlayer(name) { const FB = window.__FB__; await FB.deleteDoc(FB.doc(FB.db, "players", name.toLowerCase())); }
+
     function Toast(props) {
       const { toast, onClose } = props;
       useEffect(() => {
@@ -224,76 +214,70 @@
     }
 
     function App() {
+      const fbReady = useFirebase();
       const [view, setView] = useState("home");
       const [currentPlayer, setCurrentPlayer] = useState(null);
       const [isAdmin, setIsAdmin] = useState(false);
-      const [config, setConfig] = useState({
-        adminPassword: "",
-        deadline: DEFAULT_DEADLINE,
-        scoring: DEFAULT_SCORING,
-        initialized: false
-      });
+      const [config, setConfig] = useState({ adminPassword: "", deadline: DEFAULT_DEADLINE, scoring: DEFAULT_SCORING, initialized: false });
       const [players, setPlayers] = useState([]);
       const [results, setResults] = useState({});
       const [loading, setLoading] = useState(true);
       const [savingState, setSavingState] = useState("");
       const [toast, setToast] = useState(null);
       const [confirmDlg, setConfirmDlg] = useState(null);
-
-      const stateRef = useRef({ config, players, results });
+      const [fatalError, setFatalError] = useState(null);
 
       const showToast = useCallback((message, type) => setToast({ message, type: type || "success" }), []);
       const askConfirm = useCallback((title, message, onConfirm, danger) => setConfirmDlg({ title, message, onConfirm, danger: !!danger }), []);
 
-      const loadState = useCallback(async () => {
-        const data = await loadFromBin();
-        if (data && typeof data === "object") {
-          if (data.config) {
-            setConfig((prev) => ({ ...prev, ...data.config }));
-            stateRef.current.config = data.config;
-          }
-          if (Array.isArray(data.players)) {
-            setPlayers(data.players);
-            stateRef.current.players = data.players;
-          }
-          if (data.results && typeof data.results === "object") {
-            setResults(data.results);
-            stateRef.current.results = data.results;
-          }
-        }
-        setLoading(false);
-      }, []);
-
+      // Sincronizare instantă cu Firestore
       useEffect(() => {
-        loadState();
-        const interval = setInterval(loadState, 30000);
-        return () => clearInterval(interval);
-      }, [loadState]);
+        if (!fbReady) return;
+        const FB = window.__FB__;
+        let configLoaded = false, playersLoaded = false;
+        const checkLoaded = () => { if (configLoaded && playersLoaded) setLoading(false); };
 
-      const saveAll = async (partial) => {
-        const newState = {
-          config: partial.config != null ? partial.config : stateRef.current.config,
-          players: partial.players != null ? partial.players : stateRef.current.players,
-          results: partial.results != null ? partial.results : stateRef.current.results
-        };
-        stateRef.current = newState;
+        const u1 = FB.onSnapshot(FB.doc(FB.db, "meta", "config"), (snap) => {
+          if (snap.exists()) setConfig((p) => ({ ...p, ...snap.data() }));
+          configLoaded = true; checkLoaded();
+        }, (err) => { console.error(err); setFatalError(err.message); setLoading(false); });
+
+        const u2 = FB.onSnapshot(FB.doc(FB.db, "meta", "results"), (snap) => {
+          setResults(snap.exists() ? snap.data() : {});
+        }, (err) => console.error(err));
+
+        const u3 = FB.onSnapshot(FB.collection(FB.db, "players"), (snap) => {
+          const arr = []; snap.forEach((d) => arr.push(d.data()));
+          setPlayers(arr);
+          playersLoaded = true; checkLoaded();
+        }, (err) => { console.error(err); setFatalError(err.message); setLoading(false); });
+
+        return () => { u1(); u2(); u3(); };
+      }, [fbReady]);
+
+      const wrapSave = async (fn) => {
         setSavingState("saving");
-        const ok = await saveToBin(newState);
-        setSavingState(ok ? "saved" : "");
-        if (!ok) showToast("Eroare la salvare. Verifică conexiunea.", "error");
-        setTimeout(() => setSavingState(""), 1500);
-        return ok;
+        try {
+          await fn();
+          setSavingState("saved");
+          setTimeout(() => setSavingState(""), 1500);
+          return true;
+        } catch (e) {
+          setSavingState("");
+          showToast("Eroare la salvare: " + e.message, "error");
+          return false;
+        }
       };
 
-      const saveConfig = async (newCfg) => { setConfig(newCfg); return saveAll({ config: newCfg }); };
-      const savePlayers = async (newPlayers) => { setPlayers(newPlayers); return saveAll({ players: newPlayers }); };
-      const saveResults = async (newResults) => { setResults(newResults); return saveAll({ results: newResults }); };
+      const saveConfig = (cfg) => wrapSave(() => fbSaveConfig(cfg));
+      const savePlayer = (p) => wrapSave(() => fbSavePlayer(p));
+      const deletePlayer = (n) => wrapSave(() => fbDeletePlayer(n));
+      const saveResults = (r) => wrapSave(() => fbSaveResults(r));
 
       const isLocked = useMemo(() => {
         if (!config.deadline) return false;
         const d = new Date(config.deadline);
-        if (isNaN(d.getTime())) return false;
-        return new Date() >= d;
+        return !isNaN(d.getTime()) && new Date() >= d;
       }, [config.deadline]);
 
       const standings = useMemo(() => {
@@ -315,63 +299,58 @@
         return arr.sort((a, b) => b.total - a.total || b.exact - a.exact || b.diff - a.diff);
       }, [players, results, config.scoring]);
 
-      if (loading) {
-        return (
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-stone-400 font-mono text-sm tracking-widest animate-pulse">SE ÎNCARCĂ...</div>
-          </div>
-        );
-      }
+      if (!fbReady || loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-stone-400 font-mono text-sm tracking-widest animate-pulse">SE ÎNCARCĂ...</div></div>;
 
-      if (!config.initialized) {
-        return (
-          <>
-            <SetupView onSave={async (cfg) => {
-              await saveConfig({ ...cfg, initialized: true });
-              setIsAdmin(true);
-              setView("admin");
-              showToast("Concursul a fost inițializat! 🎉");
-            }} showToast={showToast} />
-            <Toast toast={toast} onClose={() => setToast(null)} />
-          </>
-        );
-      }
+      if (fatalError) return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md bg-red-950/40 border border-red-500/40 rounded-xl p-6">
+            <div className="text-4xl mb-3">⚠️</div>
+            <h2 className="text-xl font-black mb-2">EROARE CONECTARE</h2>
+            <p className="text-sm text-stone-300 mb-4">Verifică regulile Firestore în consola Firebase.</p>
+            <p className="text-xs font-mono text-red-300">{fatalError}</p>
+          </div>
+        </div>
+      );
+
+      if (!config.initialized) return (
+        <>
+          <SetupView onSave={async (cfg) => {
+            const ok = await saveConfig({ ...cfg, initialized: true });
+            if (ok) { setIsAdmin(true); setView("admin"); showToast("Concursul a fost inițializat! 🎉"); }
+          }} showToast={showToast} />
+          <Toast toast={toast} onClose={() => setToast(null)} />
+        </>
+      );
 
       return (
         <div className="min-h-screen text-stone-100" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(220, 38, 38, 0.15), transparent 60%), radial-gradient(ellipse 60% 80% at 100% 100%, rgba(37, 99, 235, 0.1), transparent 60%), linear-gradient(180deg, #0c0a09 0%, #0c0a09 100%)" }}>
-          <Header view={view} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} isAdmin={isAdmin} isLocked={isLocked} savingState={savingState} onRefresh={loadState} />
+          <Header view={view} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} isAdmin={isAdmin} isLocked={isLocked} savingState={savingState} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
-            {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayers={savePlayers} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
-            {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} updatePlayer={(updated) => { const newPlayers = players.map((p) => p.name === updated.name ? updated : p); setCurrentPlayer(updated); savePlayers(newPlayers); }} />}
+            {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayer={savePlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
+            {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} scoring={config.scoring} />}
-            {view === "admin" && isAdmin && <AdminView config={config} results={results} saveConfig={saveConfig} saveResults={saveResults} players={players} savePlayers={savePlayers} showToast={showToast} askConfirm={askConfirm} />}
+            {view === "admin" && isAdmin && <AdminView config={config} results={results} saveConfig={saveConfig} saveResults={saveResults} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} />}
           </main>
           <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
             <span style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 16, letterSpacing: "0.1em"}}>WC26 PREDICTOR</span>
-            <span className="mx-3 text-stone-700">·</span>
-            72 MECIURI · GRUPELE A-L · 11–28 IUNIE 2026
+            <span className="mx-3 text-stone-700">·</span>72 MECIURI · GRUPELE A-L · 11–28 IUNIE 2026
           </footer>
           <Toast toast={toast} onClose={() => setToast(null)} />
-          <ConfirmDialog open={!!confirmDlg} title={confirmDlg ? confirmDlg.title : ""} message={confirmDlg ? confirmDlg.message : ""} danger={confirmDlg ? confirmDlg.danger : false}
-            onConfirm={() => { if (confirmDlg) confirmDlg.onConfirm(); setConfirmDlg(null); }} onCancel={() => setConfirmDlg(null)} />
+          <ConfirmDialog open={!!confirmDlg} title={confirmDlg ? confirmDlg.title : ""} message={confirmDlg ? confirmDlg.message : ""} danger={confirmDlg ? confirmDlg.danger : false} onConfirm={() => { if (confirmDlg) confirmDlg.onConfirm(); setConfirmDlg(null); }} onCancel={() => setConfirmDlg(null)} />
         </div>
       );
     }
 
     function Header(props) {
-      const { view, setView, currentPlayer, setCurrentPlayer, isAdmin, isLocked, savingState, onRefresh } = props;
+      const { view, setView, currentPlayer, setCurrentPlayer, isAdmin, isLocked, savingState } = props;
       return (
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-stone-950/80 border-b border-stone-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 gap-4">
               <button onClick={() => setView("home")} className="flex items-center gap-3 group">
-                <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-amber-500 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-stone-950 font-black text-lg">⚽</span>
-                </div>
+                <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-amber-500 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform"><span className="text-stone-950 font-black text-lg">⚽</span></div>
                 <div className="text-left">
-                  <div className="font-black tracking-tight leading-none text-base sm:text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>
-                    CUPA MONDIALĂ <span className="text-amber-400">'26</span>
-                  </div>
+                  <div className="font-black tracking-tight leading-none text-base sm:text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>CUPA MONDIALĂ <span className="text-amber-400">'26</span></div>
                   <div className="text-[10px] text-stone-500 tracking-[0.25em] font-mono mt-0.5">PREDICTOR</div>
                 </div>
               </button>
@@ -383,10 +362,7 @@
               </nav>
               <div className="flex items-center gap-2">
                 {savingState && <span className="hidden sm:inline-flex text-[10px] font-mono tracking-widest text-emerald-400 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20">{savingState === "saving" ? "⏳ SALVEAZĂ" : "✓ SALVAT"}</span>}
-                <button onClick={onRefresh} className="p-2 text-stone-500 hover:text-stone-200 transition" title="Reîncarcă">↻</button>
-                <span className={"hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest px-2.5 py-1.5 rounded-md border " + (isLocked ? "bg-red-500/10 border-red-500/30 text-red-300" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300")}>
-                  {isLocked ? "🔒" : "🔓"} {isLocked ? "BLOCAT" : "DESCHIS"}
-                </span>
+                <span className={"hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest px-2.5 py-1.5 rounded-md border " + (isLocked ? "bg-red-500/10 border-red-500/30 text-red-300" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300")}>{isLocked ? "🔒" : "🔓"} {isLocked ? "BLOCAT" : "DESCHIS"}</span>
                 {currentPlayer && <button onClick={() => { setCurrentPlayer(null); setView("home"); }} className="p-2 text-stone-400 hover:text-white" title="Ieșire">⎋</button>}
               </div>
             </div>
@@ -401,10 +377,7 @@
       );
     }
 
-    function NavBtn(props) {
-      const { active, onClick, children } = props;
-      return <button onClick={onClick} className={"px-3 py-2 text-xs font-bold tracking-widest rounded-md transition-all whitespace-nowrap " + (active ? "bg-amber-400 text-stone-950" : "text-stone-400 hover:text-white hover:bg-stone-800")} style={{ fontFamily: '"Bebas Neue", sans-serif', letterSpacing: "0.15em", fontSize: 13 }}>{children}</button>;
-    }
+    function NavBtn(props) { return <button onClick={props.onClick} className={"px-3 py-2 text-xs font-bold tracking-widest rounded-md transition-all whitespace-nowrap " + (props.active ? "bg-amber-400 text-stone-950" : "text-stone-400 hover:text-white hover:bg-stone-800")} style={{ fontFamily: '"Bebas Neue", sans-serif', letterSpacing: "0.15em", fontSize: 13 }}>{props.children}</button>; }
 
     const inputStyleObj = { width: "100%", background: "rgba(15, 15, 17, 0.7)", border: "1px solid #44403c", borderRadius: "8px", padding: "12px 14px", color: "#fafaf9", fontSize: "16px", outline: "none", transition: "border-color 0.15s", fontFamily: '"DM Sans", system-ui, sans-serif', WebkitAppearance: "none", appearance: "none", boxSizing: "border-box" };
 
@@ -418,7 +391,6 @@
       const [outcome, setOutcome] = useState(2);
       const [errors, setErrors] = useState({});
       const [submitting, setSubmitting] = useState(false);
-
       const submit = async () => {
         const e = {};
         if (!pwd || pwd.length < 4) e.pwd = "Parola trebuie să aibă cel puțin 4 caractere";
@@ -426,11 +398,9 @@
         if (!deadline) e.deadline = "Alege un deadline valid";
         if (Object.keys(e).length) { setErrors(e); showToast("Verifică câmpurile marcate cu roșu", "error"); return; }
         setErrors({}); setSubmitting(true);
-        try {
-          await onSave({ adminPassword: pwd, deadline, scoring: { exact: +exact || 5, diff: +diff || 3, outcome: +outcome || 2, wrong: 0 } });
-        } catch (err) { showToast("A apărut o eroare. Încearcă din nou.", "error"); setSubmitting(false); }
+        try { await onSave({ adminPassword: pwd, deadline, scoring: { exact: +exact || 5, diff: +diff || 3, outcome: +outcome || 2, wrong: 0 } }); }
+        catch (err) { showToast("A apărut o eroare.", "error"); setSubmitting(false); }
       };
-
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="max-w-xl w-full">
@@ -454,7 +424,7 @@
                 <div className="text-xs text-stone-500 mb-3">După această oră, jucătorii nu mai pot edita pronosticurile.</div>
                 <input type="datetime-local" value={deadline} onChange={(e) => { setDeadline(e.target.value); setErrors((p) => ({...p, deadline: null})); }} style={{...inputStyleObj, borderColor: errors.deadline ? "#dc2626" : "#44403c"}} />
                 {errors.deadline && <div className="text-xs text-red-400 mt-1.5">⚠ {errors.deadline}</div>}
-                <div className="text-xs text-stone-500 mt-1.5 font-mono">Recomandat: 11 iunie, 20:00 (cu 2h înainte de primul meci)</div>
+                <div className="text-xs text-stone-500 mt-1.5 font-mono">Recomandat: 11 iunie, 20:00</div>
               </div>
               <div>
                 <Label>PUNCTAJE</Label>
@@ -464,9 +434,7 @@
                   <ScoringInput label="Rezultat 1X2" value={outcome} onChange={setOutcome} hint="2-1 → 4-0" color="sky" />
                 </div>
               </div>
-              <button type="button" onClick={submit} disabled={submitting} className="w-full py-4 bg-amber-400 text-stone-950 font-black tracking-widest rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-60 active:bg-amber-500" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em", fontSize: 16, touchAction: "manipulation"}}>
-                {submitting ? "SE INIȚIALIZEAZĂ..." : "🚀 INIȚIALIZEAZĂ CONCURSUL"}
-              </button>
+              <button type="button" onClick={submit} disabled={submitting} className="w-full py-4 bg-amber-400 text-stone-950 font-black tracking-widest rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-60 active:bg-amber-500" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em", fontSize: 16, touchAction: "manipulation"}}>{submitting ? "SE INIȚIALIZEAZĂ..." : "🚀 INIȚIALIZEAZĂ CONCURSUL"}</button>
             </div>
           </div>
         </div>
@@ -488,44 +456,28 @@
     }
 
     function HomeView(props) {
-      const { config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayers, isAdmin, setIsAdmin, adminPassword, showToast } = props;
+      const { config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayer, isAdmin, setIsAdmin, adminPassword, showToast } = props;
       const [showLogin, setShowLogin] = useState(false);
       const [showRegister, setShowRegister] = useState(false);
       const [showAdminLogin, setShowAdminLogin] = useState(false);
-
       const upcoming = MATCHES.find((m) => {
         const parts = m.d.split(".");
-        const dateStr = "2026-" + parts[1] + "-" + parts[0] + "T" + m.t + ":00";
-        return new Date(dateStr) > new Date();
+        return new Date("2026-" + parts[1] + "-" + parts[0] + "T" + m.t + ":00") > new Date();
       }) || MATCHES[0];
-
       const deadlineDate = new Date(config.deadline);
-      const now = new Date();
-      const msLeft = deadlineDate - now;
+      const msLeft = deadlineDate - new Date();
       const days = Math.max(0, Math.floor(msLeft / 86400000));
       const hours = Math.max(0, Math.floor((msLeft % 86400000) / 3600000));
       const minutes = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
-
       return (
         <div className="space-y-8">
           <div className="relative overflow-hidden rounded-2xl border border-stone-800 bg-gradient-to-br from-stone-900 to-stone-950 p-6 sm:p-10">
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #fbbf24 0%, transparent 40%), radial-gradient(circle at 20% 80%, #dc2626 0%, transparent 40%)" }} />
             <div className="relative">
               <div className="text-xs tracking-[0.3em] text-amber-400 font-mono mb-3">⚽ FAZA GRUPELOR · 11–28 IUNIE 2026</div>
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black leading-[0.9] tracking-tight mb-4" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>
-                PARIAZĂ.<br/><span className="text-amber-400">CALCULEAZĂ.</span><br/><span className="text-stone-500">CÂȘTIGĂ.</span>
-              </h1>
-              <p className="text-stone-400 max-w-xl mt-4 text-sm sm:text-base leading-relaxed">
-                72 de meciuri din faza grupelor. {players.length} {players.length === 1 ? "jucător înscris" : "jucători înscriși"}.
-                {!isLocked && msLeft > 0 && <> Pronosticurile se închid pe <span className="text-stone-200 font-semibold">{deadlineDate.toLocaleString("ro-RO", {day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"})}</span>.</>}
-              </p>
-              {!isLocked && msLeft > 0 && (
-                <div className="mt-6 inline-flex gap-3 items-end">
-                  <CountdownPill value={days} label="ZILE" />
-                  <CountdownPill value={hours} label="ORE" />
-                  <CountdownPill value={minutes} label="MIN" />
-                </div>
-              )}
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black leading-[0.9] tracking-tight mb-4" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>PARIAZĂ.<br/><span className="text-amber-400">CALCULEAZĂ.</span><br/><span className="text-stone-500">CÂȘTIGĂ.</span></h1>
+              <p className="text-stone-400 max-w-xl mt-4 text-sm sm:text-base leading-relaxed">72 de meciuri din faza grupelor. {players.length} {players.length === 1 ? "jucător înscris" : "jucători înscriși"}.{!isLocked && msLeft > 0 && <> Pronosticurile se închid pe <span className="text-stone-200 font-semibold">{deadlineDate.toLocaleString("ro-RO", {day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"})}</span>.</>}</p>
+              {!isLocked && msLeft > 0 && <div className="mt-6 inline-flex gap-3 items-end"><CountdownPill value={days} label="ZILE" /><CountdownPill value={hours} label="ORE" /><CountdownPill value={minutes} label="MIN" /></div>}
               <div className="flex flex-wrap gap-3 mt-8">
                 {!currentPlayer && !isLocked && <>
                   <button type="button" onClick={() => setShowRegister(true)} className="bg-amber-400 text-stone-950 px-5 py-3 rounded-lg font-bold hover:bg-amber-300 transition-colors" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em", fontSize:15}}>ÎNSCRIE-TE</button>
@@ -537,13 +489,11 @@
               </div>
             </div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <InfoCard icon="🏆" label="LIDER" value={standings[0] && standings[0].played > 0 ? standings[0].name : "—"} subValue={standings[0] && standings[0].played > 0 ? standings[0].total + " pct" : "încă nu sunt rezultate"} accent="amber" />
             <InfoCard icon="👥" label="JUCĂTORI" value={String(players.length)} subValue={isLocked ? "pronosticuri închise" : "mai poți înscrie până la deadline"} accent="sky" />
             <InfoCard icon="📅" label="URMĂTORUL MECI" value={upcoming.f1 + " " + upcoming.e1 + " – " + upcoming.e2 + " " + upcoming.f2} subValue={upcoming.d + " · " + upcoming.t + " · Grupa " + upcoming.g} accent="red" />
           </div>
-
           <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
             <div className="text-xs tracking-[0.25em] text-stone-500 font-mono mb-4">SISTEM DE PUNCTAJ</div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -553,39 +503,27 @@
               <ScoringTile pts={config.scoring.wrong} label="GREȘIT" desc="rezultat invers" color="from-stone-700 to-stone-800" />
             </div>
           </div>
-
           {standings[0] && standings[0].played > 0 && (
             <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-xs tracking-[0.25em] text-stone-500 font-mono">CLASAMENT TOP 5</div>
-                <button type="button" onClick={() => setView("leaderboard")} className="text-xs text-amber-400 hover:text-amber-300 font-mono tracking-widest">VEZI TOT →</button>
-              </div>
+              <div className="flex items-center justify-between mb-4"><div className="text-xs tracking-[0.25em] text-stone-500 font-mono">CLASAMENT TOP 5</div><button type="button" onClick={() => setView("leaderboard")} className="text-xs text-amber-400 hover:text-amber-300 font-mono tracking-widest">VEZI TOT →</button></div>
               <div className="space-y-2">
                 {standings.slice(0, 5).map((s, i) => (
                   <div key={s.name} className="flex items-center gap-4 py-2 border-b border-stone-800 last:border-0">
                     <div className={"w-8 h-8 flex items-center justify-center rounded-md font-black " + (i === 0 ? "bg-amber-400 text-stone-950" : i === 1 ? "bg-stone-300 text-stone-950" : i === 2 ? "bg-orange-700 text-white" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>{i + 1}</div>
                     <div className="flex-1 font-semibold">{s.name}</div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div>
-                      <div className="text-[10px] text-stone-500 font-mono tracking-wider">PCT</div>
-                    </div>
+                    <div className="text-right"><div className="text-2xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div><div className="text-[10px] text-stone-500 font-mono tracking-wider">PCT</div></div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
           {!isAdmin && <div className="text-center pt-4"><button type="button" onClick={() => setShowAdminLogin(true)} className="text-xs text-stone-600 hover:text-stone-400 font-mono tracking-widest">🔐 AUTENTIFICARE ADMIN</button></div>}
-
           {showRegister && <Modal onClose={() => setShowRegister(false)} title="ÎNSCRIERE NOUĂ"><RegisterForm players={players} showToast={showToast} onSubmit={async (name, password) => {
-            const newPlayer = { name: name, password: password, predictions: {} };
-            await savePlayers([...players, newPlayer]);
-            setCurrentPlayer(newPlayer); setShowRegister(false); setView("predict");
-            showToast("Bun venit, " + name + "! 🎯");
+            const newPlayer = { name, password, predictions: {} };
+            const ok = await savePlayer(newPlayer);
+            if (ok) { setCurrentPlayer(newPlayer); setShowRegister(false); setView("predict"); showToast("Bun venit, " + name + "! 🎯"); }
           }} /></Modal>}
-
-          {showLogin && <Modal onClose={() => setShowLogin(false)} title="AUTENTIFICARE JUCĂTOR"><LoginForm players={players} showToast={showToast} onSubmit={(player) => { setCurrentPlayer(player); setShowLogin(false); setView("predict"); showToast("Salut, " + player.name + "!"); }} /></Modal>}
-
+          {showLogin && <Modal onClose={() => setShowLogin(false)} title="AUTENTIFICARE JUCĂTOR"><LoginForm players={players} showToast={showToast} onSubmit={(p) => { setCurrentPlayer(p); setShowLogin(false); setView("predict"); showToast("Salut, " + p.name + "!"); }} /></Modal>}
           {showAdminLogin && <Modal onClose={() => setShowAdminLogin(false)} title="ADMIN LOGIN"><AdminLoginForm adminPassword={adminPassword} showToast={showToast} onSubmit={() => { setIsAdmin(true); setShowAdminLogin(false); setView("admin"); showToast("Autentificare admin reușită"); }} /></Modal>}
         </div>
       );
@@ -659,10 +597,7 @@
       return (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={props.onClose}>
           <div onClick={(e) => e.stopPropagation()} className="bg-stone-900 border border-stone-700 rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-black tracking-widest text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{props.title}</h2>
-              <button type="button" onClick={props.onClose} className="text-stone-500 hover:text-white p-2 -m-2">✕</button>
-            </div>
+            <div className="flex items-center justify-between mb-5"><h2 className="font-black tracking-widest text-lg" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{props.title}</h2><button type="button" onClick={props.onClose} className="text-stone-500 hover:text-white p-2 -m-2">✕</button></div>
             {props.children}
           </div>
         </div>
@@ -692,32 +627,18 @@
             <div>
               <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PRONOSTICURI · {player.name.toUpperCase()}</div>
               <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>COMPLETEAZĂ-ȚI <span className="text-amber-400">SCORURILE</span></h2>
-              <p className="text-stone-400 mt-2 text-sm">
-                {isLocked ? <span className="text-red-400">🔒 Pronosticurile sunt închise. Poți doar consulta.</span>
-                : <>Completează pronosticuri pentru cele 72 de meciuri. <span className="text-amber-400 font-bold">{completed}/72</span> completate.</>}
-              </p>
+              <p className="text-stone-400 mt-2 text-sm">{isLocked ? <span className="text-red-400">🔒 Pronosticurile sunt închise.</span> : <>Completează pronosticuri pentru cele 72 de meciuri. <span className="text-amber-400 font-bold">{completed}/72</span> completate.</>}</p>
             </div>
-            {!isLocked && (
-              <div className="bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 min-w-[180px]">
-                <div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES</span><span>{Math.round(completed/72*100)}%</span></div>
-                <div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{width: (completed/72*100) + "%"}}/></div>
-              </div>
-            )}
+            {!isLocked && <div className="bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 min-w-[180px]"><div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES</span><span>{Math.round(completed/72*100)}%</span></div><div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{width: (completed/72*100) + "%"}}/></div></div>}
           </div>
-
           <div className="space-y-2">
             <input type="search" placeholder="caută echipă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64 bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400" style={{fontSize:16}} />
             <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
               <button type="button" onClick={() => setFilter("all")} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter==="all" ? "bg-amber-400 text-stone-950" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
-              {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => (
-                <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>
-              ))}
+              {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>)}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filtered.map((m) => <MatchCard key={m.n} match={m} pred={player.predictions ? player.predictions[m.n] : null} real={results[m.n]} scoring={scoring} isLocked={isLocked} onUpdate={updatePred} />)}
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{filtered.map((m) => <MatchCard key={m.n} match={m} pred={player.predictions ? player.predictions[m.n] : null} real={results[m.n]} scoring={scoring} isLocked={isLocked} onUpdate={updatePred} />)}</div>
           {filtered.length === 0 && <div className="text-center py-12 text-stone-500">Niciun meci găsit.</div>}
         </div>
       );
@@ -742,30 +663,14 @@
       return (
         <div className="rounded-xl border bg-stone-900/60 backdrop-blur p-4 transition" style={{borderColor: c.border + "60"}}>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text, border: "1px solid " + c.border + "40"}}>GR. {m.g}</span>
-              <span className="text-[10px] text-stone-500 font-mono tracking-widest">M{String(m.n).padStart(2,"0")}</span>
-            </div>
+            <div className="flex items-center gap-2"><span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text, border: "1px solid " + c.border + "40"}}>GR. {m.g}</span><span className="text-[10px] text-stone-500 font-mono tracking-widest">M{String(m.n).padStart(2,"0")}</span></div>
             <div className="text-[10px] text-stone-400 font-mono tracking-wider">{m.d} · {m.t}</div>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span>
-              <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span>
-              <input type="number" inputMode="numeric" min="0" max="15" value={pred ? (pred.g1 != null ? pred.g1 : "") : ""} onChange={(e) => onUpdate(m.n, "g1", e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:"none" }} />
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span>
-              <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span>
-              <input type="number" inputMode="numeric" min="0" max="15" value={pred ? (pred.g2 != null ? pred.g2 : "") : ""} onChange={(e) => onUpdate(m.n, "g2", e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:"none" }} />
-            </div>
+            <div className="flex items-center gap-3"><span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span><span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span><input type="number" inputMode="numeric" min="0" max="15" value={pred ? (pred.g1 != null ? pred.g1 : "") : ""} onChange={(e) => onUpdate(m.n, "g1", e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:"none" }} /></div>
+            <div className="flex items-center gap-3"><span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span><span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span><input type="number" inputMode="numeric" min="0" max="15" value={pred ? (pred.g2 != null ? pred.g2 : "") : ""} onChange={(e) => onUpdate(m.n, "g2", e.target.value)} disabled={isLocked} placeholder="-" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none transition disabled:opacity-60 shrink-0" style={{ fontFamily:'"Bebas Neue", sans-serif', backgroundColor: inputBg, color: inputColor, border: inputBorder, WebkitAppearance:"none" }} /></div>
           </div>
-          {hasResult && (
-            <div className="mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2"><div className="text-stone-500 font-mono tracking-widest text-[10px]">REZULTAT REAL</div><div className="font-black text-emerald-400" style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{real.g1} – {real.g2}</div></div>
-              {pointBadge}
-            </div>
-          )}
+          {hasResult && <div className="mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs"><div className="flex items-center gap-2"><div className="text-stone-500 font-mono tracking-widest text-[10px]">REZULTAT REAL</div><div className="font-black text-emerald-400" style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{real.g1} – {real.g2}</div></div>{pointBadge}</div>}
         </div>
       );
     }
@@ -781,7 +686,7 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CINE-I <span className="text-amber-400">CEL MAI BUN?</span></h2>
             <p className="text-stone-400 text-sm mt-2">{matchesPlayed}/72 meciuri jucate · {players.length} jucători înscriși</p>
           </div>
-          {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă. Înscrieți-vă din pagina principală!</div>
+          {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă.</div>
           : <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl overflow-hidden">
               <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,100px] gap-2 px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-[10px] tracking-widest text-stone-500 font-mono">
                 <div>LOC</div><div>JUCĂTOR</div><div className="text-center">EXACTE</div><div className="text-center">DIFER.</div><div className="text-center">1X2</div><div className="text-center">GREȘ.</div><div className="text-right">TOTAL</div>
@@ -839,15 +744,8 @@
               else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
               return (
                 <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + "40"}}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[9px] font-mono text-stone-500">M{m.n}</span>
-                    <span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>
-                    {real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}
-                    {pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}
-                  </div>
+                  <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono text-stone-500">M{m.n}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span></div>
+                  <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
                 </div>
               );
             })}
@@ -865,13 +763,11 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
           </div>
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["results", "🥅 REZULTATE"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => (
-              <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>
-            ))}
+            {[["results", "🥅 REZULTATE"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
           </div>
           {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} />}
           {tab === "settings" && <AdminSettings config={props.config} saveConfig={props.saveConfig} showToast={props.showToast} />}
-          {tab === "players" && <AdminPlayers players={props.players} savePlayers={props.savePlayers} askConfirm={props.askConfirm} showToast={props.showToast} />}
+          {tab === "players" && <AdminPlayers players={props.players} deletePlayer={props.deletePlayer} askConfirm={props.askConfirm} showToast={props.showToast} />}
         </div>
       );
     }
@@ -893,23 +789,20 @@
           const v = pendingResults[k];
           if (v && v.g1 !== "" && v.g2 !== "" && v.g1 != null && v.g2 != null) clean[k] = { g1: +v.g1, g2: +v.g2 };
         }
-        await saveResults(clean);
-        setDirty(false);
-        showToast("Rezultate salvate. Punctajele s-au actualizat.");
+        const ok = await saveResults(clean);
+        if (ok) { setDirty(false); showToast("Rezultate salvate. Punctajele s-au actualizat."); }
       };
       const filtered = MATCHES.filter((m) => filter === "all" || m.g === filter);
       const completed = MATCHES.filter((m) => pendingResults[m.n] && pendingResults[m.n].g1 !== "" && pendingResults[m.n].g2 !== "" && pendingResults[m.n].g1 != null && pendingResults[m.n].g2 != null).length;
       return (
         <div className="space-y-4">
           <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div><div className="font-bold text-emerald-300">📊 {completed}/72 meciuri completate</div><div className="text-xs text-stone-400 mt-1">Punctajele jucătorilor se actualizează automat după salvare.</div></div>
+            <div><div className="font-bold text-emerald-300">📊 {completed}/72 meciuri completate</div><div className="text-xs text-stone-400 mt-1">Punctajele se actualizează automat după salvare.</div></div>
             {dirty && <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-5 py-2.5 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>💾 SALVEAZĂ</button>}
           </div>
           <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
             <button type="button" onClick={() => setFilter("all")} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter==="all" ? "bg-amber-400 text-stone-950" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
-            {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => (
-              <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>
-            ))}
+            {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filtered.map((m) => {
@@ -917,29 +810,16 @@
               const c = groupColors[m.g];
               return (
                 <div key={m.n} className="rounded-xl border bg-stone-900/60 p-4" style={{borderColor: c.border + "40"}}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text}}>GR. {m.g} · M{m.n}</span>
-                    <span className="text-[10px] text-stone-500 font-mono">{m.d} · {m.t}</span>
-                  </div>
+                  <div className="flex items-center justify-between mb-3"><span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text}}>GR. {m.g} · M{m.n}</span><span className="text-[10px] text-stone-500 font-mono">{m.d} · {m.t}</span></div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span>
-                      <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span>
-                      <input type="number" inputMode="numeric" min="0" max="15" value={r && r.g1 != null ? r.g1 : ""} onChange={(e) => update(m.n, "g1", e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:"#dcfce7", color:"#0c0a09", border:"2px solid #22c55e", WebkitAppearance:"none"}} />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span>
-                      <span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span>
-                      <input type="number" inputMode="numeric" min="0" max="15" value={r && r.g2 != null ? r.g2 : ""} onChange={(e) => update(m.n, "g2", e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:"#dcfce7", color:"#0c0a09", border:"2px solid #22c55e", WebkitAppearance:"none"}} />
-                    </div>
+                    <div className="flex items-center gap-3"><span className="text-2xl shrink-0 w-8 text-center">{m.f1}</span><span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e1}</span><input type="number" inputMode="numeric" min="0" max="15" value={r && r.g1 != null ? r.g1 : ""} onChange={(e) => update(m.n, "g1", e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:"#dcfce7", color:"#0c0a09", border:"2px solid #22c55e", WebkitAppearance:"none"}} /></div>
+                    <div className="flex items-center gap-3"><span className="text-2xl shrink-0 w-8 text-center">{m.f2}</span><span className="font-bold text-sm flex-1 min-w-0 truncate">{m.e2}</span><input type="number" inputMode="numeric" min="0" max="15" value={r && r.g2 != null ? r.g2 : ""} onChange={(e) => update(m.n, "g2", e.target.value)} placeholder="–" className="w-14 h-12 text-center rounded-lg font-black text-xl outline-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor:"#dcfce7", color:"#0c0a09", border:"2px solid #22c55e", WebkitAppearance:"none"}} /></div>
                   </div>
                 </div>
               );
             })}
           </div>
-          {dirty && <div className="sticky bottom-4 flex justify-end">
-            <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shadow-2xl shadow-amber-500/30" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em"}}>💾 SALVEAZĂ MODIFICĂRILE</button>
-          </div>}
+          {dirty && <div className="sticky bottom-4 flex justify-end"><button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shadow-2xl shadow-amber-500/30" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em"}}>💾 SALVEAZĂ MODIFICĂRILE</button></div>}
         </div>
       );
     }
@@ -950,8 +830,8 @@
       const [deadline, setDeadline] = useState(config.deadline);
       const [pwd, setPwd] = useState(config.adminPassword);
       const save = async () => {
-        await saveConfig({ ...config, scoring: { ...scoring, wrong: 0 }, deadline, adminPassword: pwd });
-        showToast("Setări salvate cu succes!");
+        const ok = await saveConfig({ ...config, scoring: { ...scoring, wrong: 0 }, deadline, adminPassword: pwd });
+        if (ok) showToast("Setări salvate cu succes!");
       };
       return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -984,10 +864,10 @@
     }
 
     function AdminPlayers(props) {
-      const { players, savePlayers, askConfirm, showToast } = props;
+      const { players, deletePlayer, askConfirm, showToast } = props;
       const remove = (name) => {
         askConfirm("ȘTERGE JUCĂTOR", "Sigur vrei să ștergi jucătorul \"" + name + "\"? Toate pronosticurile lui vor fi pierdute.",
-          async () => { await savePlayers(players.filter((p) => p.name !== name)); showToast("Jucătorul \"" + name + "\" a fost șters."); }, true);
+          async () => { const ok = await deletePlayer(name); if (ok) showToast("Jucătorul \"" + name + "\" a fost șters."); }, true);
       };
       return (
         <div className="bg-stone-900/60 border border-stone-800 rounded-xl overflow-hidden">
