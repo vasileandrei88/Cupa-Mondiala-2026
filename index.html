@@ -170,26 +170,105 @@
 
     const DEFAULT_SCORING = { exact: 5, diff: 3, outcome: 2, wrong: 0 };
 
-    // Optimi de 32 - structura cu date oficiale FIFA + descrierea matchup-ului
-    // (echipele se completează de admin după faza grupelor)
-    const KNOCKOUT_R32 = [
-      { n: 73, d: "28.06", t: "20:00", desc: "Locul 2 Grupa A vs Locul 2 Grupa B" },
-      { n: 74, d: "29.06", t: "00:00", desc: "Locul 1 Grupa B vs L3 Grupele A/B/D/E/F" },
-      { n: 75, d: "29.06", t: "20:00", desc: "Locul 1 Grupa C vs Locul 2 Grupa F" },
-      { n: 76, d: "30.06", t: "00:00", desc: "Locul 1 Grupa E vs L3 Grupele A/B/C/D/F" },
-      { n: 77, d: "30.06", t: "20:00", desc: "Locul 1 Grupa A vs L3 Grupele C/D/E/F" },
-      { n: 78, d: "01.07", t: "00:00", desc: "Locul 1 Grupa F vs Locul 2 Grupa C" },
-      { n: 79, d: "01.07", t: "20:00", desc: "Locul 2 Grupa D vs Locul 2 Grupa E" },
-      { n: 80, d: "02.07", t: "00:00", desc: "Locul 1 Grupa D vs L3 Grupele B/E/F/H" },
-      { n: 81, d: "02.07", t: "20:00", desc: "Locul 1 Grupa G vs L3 Grupele A/E/H/I/J/K/L" },
-      { n: 82, d: "03.07", t: "00:00", desc: "Locul 1 Grupa I vs L3 Grupele E/H/J/K/L" },
-      { n: 83, d: "03.07", t: "20:00", desc: "Locul 1 Grupa J vs Locul 2 Grupa L" },
-      { n: 84, d: "03.07", t: "23:00", desc: "Locul 1 Grupa H vs Locul 2 Grupa K" },
-      { n: 85, d: "04.07", t: "00:00", desc: "Locul 2 Grupa H vs Locul 2 Grupa I" },
-      { n: 86, d: "04.07", t: "03:00", desc: "Locul 2 Grupa G vs Locul 2 Grupa J" },
-      { n: 87, d: "04.07", t: "21:00", desc: "Locul 1 Grupa K vs L3 Grupele B/E/F/H" },
-      { n: 88, d: "04.07", t: "23:00", desc: "Locul 1 Grupa L vs L3 Grupele E/H/I/J/K" }
-    ];
+    // Toate fazele eliminatorii - structura cu date oficiale FIFA + descrierea matchup-ului
+    // (echipele se completează de admin pe parcurs)
+    const KNOCKOUT_PHASES = {
+      R32: {
+        key: "R32",
+        label: "OPTIMI 32",
+        shortLabel: "R32",
+        icon: "🏆",
+        order: 1,
+        color: { bg: "rgba(139, 92, 246, 0.15)", border: "#8b5cf6", text: "#c4b5fd" },
+        matches: [
+          { n: 73, d: "28.06", t: "20:00", desc: "Locul 2 Grupa A vs Locul 2 Grupa B" },
+          { n: 74, d: "29.06", t: "00:00", desc: "Locul 1 Grupa B vs L3 Grupele A/B/D/E/F" },
+          { n: 75, d: "29.06", t: "20:00", desc: "Locul 1 Grupa C vs Locul 2 Grupa F" },
+          { n: 76, d: "30.06", t: "00:00", desc: "Locul 1 Grupa E vs L3 Grupele A/B/C/D/F" },
+          { n: 77, d: "30.06", t: "20:00", desc: "Locul 1 Grupa A vs L3 Grupele C/D/E/F" },
+          { n: 78, d: "01.07", t: "00:00", desc: "Locul 1 Grupa F vs Locul 2 Grupa C" },
+          { n: 79, d: "01.07", t: "20:00", desc: "Locul 2 Grupa D vs Locul 2 Grupa E" },
+          { n: 80, d: "02.07", t: "00:00", desc: "Locul 1 Grupa D vs L3 Grupele B/E/F/H" },
+          { n: 81, d: "02.07", t: "20:00", desc: "Locul 1 Grupa G vs L3 Grupele A/E/H/I/J/K/L" },
+          { n: 82, d: "03.07", t: "00:00", desc: "Locul 1 Grupa I vs L3 Grupele E/H/J/K/L" },
+          { n: 83, d: "03.07", t: "20:00", desc: "Locul 1 Grupa J vs Locul 2 Grupa L" },
+          { n: 84, d: "03.07", t: "23:00", desc: "Locul 1 Grupa H vs Locul 2 Grupa K" },
+          { n: 85, d: "04.07", t: "00:00", desc: "Locul 2 Grupa H vs Locul 2 Grupa I" },
+          { n: 86, d: "04.07", t: "03:00", desc: "Locul 2 Grupa G vs Locul 2 Grupa J" },
+          { n: 87, d: "04.07", t: "21:00", desc: "Locul 1 Grupa K vs L3 Grupele B/E/F/H" },
+          { n: 88, d: "04.07", t: "23:00", desc: "Locul 1 Grupa L vs L3 Grupele E/H/I/J/K" }
+        ]
+      },
+      R16: {
+        key: "R16",
+        label: "OPTIMI 16",
+        shortLabel: "R16",
+        icon: "⚔️",
+        order: 2,
+        color: { bg: "rgba(59, 130, 246, 0.15)", border: "#3b82f6", text: "#93c5fd" },
+        matches: [
+          { n: 89, d: "04.07", t: "20:00", desc: "Câștigător M77 vs Câștigător M79" },
+          { n: 90, d: "05.07", t: "00:00", desc: "Câștigător M74 vs Câștigător M80" },
+          { n: 91, d: "05.07", t: "20:00", desc: "Câștigător M75 vs Câștigător M73" },
+          { n: 92, d: "06.07", t: "00:00", desc: "Câștigător M76 vs Câștigător M78" },
+          { n: 93, d: "06.07", t: "20:00", desc: "Câștigător M81 vs Câștigător M87" },
+          { n: 94, d: "07.07", t: "00:00", desc: "Câștigător M82 vs Câștigător M86" },
+          { n: 95, d: "07.07", t: "20:00", desc: "Câștigător M83 vs Câștigător M85" },
+          { n: 96, d: "08.07", t: "00:00", desc: "Câștigător M84 vs Câștigător M88" }
+        ]
+      },
+      QF: {
+        key: "QF",
+        label: "SFERTURI",
+        shortLabel: "QF",
+        icon: "🔥",
+        order: 3,
+        color: { bg: "rgba(20, 184, 166, 0.15)", border: "#14b8a6", text: "#5eead4" },
+        matches: [
+          { n: 97, d: "09.07", t: "22:00", desc: "Câștigător M89 vs Câștigător M91" },
+          { n: 98, d: "10.07", t: "01:00", desc: "Câștigător M90 vs Câștigător M92" },
+          { n: 99, d: "11.07", t: "22:00", desc: "Câștigător M93 vs Câștigător M95" },
+          { n: 100, d: "12.07", t: "01:00", desc: "Câștigător M94 vs Câștigător M96" }
+        ]
+      },
+      SF: {
+        key: "SF",
+        label: "SEMIFINALE",
+        shortLabel: "SF",
+        icon: "🌟",
+        order: 4,
+        color: { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24" },
+        matches: [
+          { n: 101, d: "14.07", t: "22:00", desc: "Câștigător M97 vs Câștigător M98" },
+          { n: 102, d: "15.07", t: "22:00", desc: "Câștigător M99 vs Câștigător M100" }
+        ]
+      },
+      "3RD": {
+        key: "3RD",
+        label: "FINALA MICĂ",
+        shortLabel: "3RD",
+        icon: "🥉",
+        order: 5,
+        color: { bg: "rgba(217, 119, 6, 0.15)", border: "#d97706", text: "#fbbf24" },
+        matches: [
+          { n: 103, d: "18.07", t: "22:00", desc: "Învingător M101 vs Învingător M102 (locurile 3-4)" }
+        ]
+      },
+      FINAL: {
+        key: "FINAL",
+        label: "FINALA",
+        shortLabel: "FINAL",
+        icon: "🏆",
+        order: 6,
+        color: { bg: "rgba(234, 179, 8, 0.2)", border: "#eab308", text: "#fde047" },
+        matches: [
+          { n: 104, d: "19.07", t: "22:00", desc: "Câștigător M101 vs Câștigător M102" }
+        ]
+      }
+    };
+
+    // Listă plată cu toate fazele în ordinea afișării
+    const PHASES_ORDER = ["R32", "R16", "QF", "SF", "3RD", "FINAL"];
     const DEFAULT_DEADLINE = "2026-06-11T20:00";
 
     // Punctaje întrebări bonus (dublate față de original)
@@ -254,7 +333,12 @@
       J: { bg: "rgba(192, 38, 211, 0.15)", border: "#c026d3", text: "#f0abfc" },
       K: { bg: "rgba(219, 39, 119, 0.15)", border: "#db2777", text: "#f9a8d4" },
       L: { bg: "rgba(225, 29, 72, 0.15)", border: "#e11d48", text: "#fda4af" },
-      R32: { bg: "rgba(139, 92, 246, 0.15)", border: "#8b5cf6", text: "#c4b5fd" }
+      R32: { bg: "rgba(139, 92, 246, 0.15)", border: "#8b5cf6", text: "#c4b5fd" },
+      R16: { bg: "rgba(59, 130, 246, 0.15)", border: "#3b82f6", text: "#93c5fd" },
+      QF: { bg: "rgba(20, 184, 166, 0.15)", border: "#14b8a6", text: "#5eead4" },
+      SF: { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24" },
+      "3RD": { bg: "rgba(217, 119, 6, 0.15)", border: "#d97706", text: "#fbbf24" },
+      FINAL: { bg: "rgba(234, 179, 8, 0.2)", border: "#eab308", text: "#fde047" }
     };
 
     function useFirebase() {
@@ -273,15 +357,19 @@
     async function fbSaveBonusResults(r) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "bonusResults"), r); }
     async function fbSavePlayer(p) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "players", p.name.toLowerCase()), p); }
     async function fbDeletePlayer(name) { const FB = window.__FB__; await FB.deleteDoc(FB.doc(FB.db, "players", name.toLowerCase())); }
-    async function fbSaveKnockoutR32(data) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "knockoutR32"), data); }
+    async function fbSaveKnockoutPhase(phaseKey, data) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "knockout_" + phaseKey), data); }
 
-    // Construiește lista de meciuri R32 fuzionând structura statică cu echipele introduse de admin
-    function buildR32Matches(knockoutR32Data) {
-      return KNOCKOUT_R32.map((base) => {
-        const teamData = (knockoutR32Data && knockoutR32Data[base.n]) || {};
+    // Construiește meciurile unei faze fuzionând structura statică cu echipele introduse de admin
+    function buildKnockoutMatches(phaseKey, phaseData) {
+      const phase = KNOCKOUT_PHASES[phaseKey];
+      if (!phase) return [];
+      return phase.matches.map((base) => {
+        const teamData = (phaseData && phaseData[base.n]) || {};
         return {
           ...base,
-          g: "R32",
+          g: phaseKey,
+          phaseLabel: phase.shortLabel,
+          phaseFullLabel: phase.label,
           e1: teamData.e1 || "",
           e2: teamData.e2 || "",
           f1: teamData.f1 || "",
@@ -296,12 +384,12 @@
     async function exportAllData() {
       const FB = window.__FB__;
       const data = {
-        version: "1.1",
+        version: "1.2",
         exportedAt: new Date().toISOString(),
         config: null,
         results: {},
         bonusResults: {},
-        knockoutR32: {},
+        knockouts: {},
         players: []
       };
       const configSnap = await FB.getDoc(FB.doc(FB.db, "meta", "config"));
@@ -310,8 +398,13 @@
       if (resultsSnap.exists()) data.results = resultsSnap.data();
       const bonusSnap = await FB.getDoc(FB.doc(FB.db, "meta", "bonusResults"));
       if (bonusSnap.exists()) data.bonusResults = bonusSnap.data();
-      const r32Snap = await FB.getDoc(FB.doc(FB.db, "meta", "knockoutR32"));
-      if (r32Snap.exists()) data.knockoutR32 = r32Snap.data();
+      // Export all knockout phases
+      for (const phaseKey of PHASES_ORDER) {
+        const snap = await FB.getDoc(FB.doc(FB.db, "meta", "knockout_" + phaseKey));
+        if (snap.exists()) data.knockouts[phaseKey] = snap.data();
+      }
+      // Backwards compatibility: keep knockoutR32 as alias
+      if (data.knockouts.R32) data.knockoutR32 = data.knockouts.R32;
       const playersSnap = await FB.getDocs(FB.collection(FB.db, "players"));
       playersSnap.forEach((d) => data.players.push(d.data()));
       return data;
@@ -327,7 +420,17 @@
       if (data.config) batch.set(FB.doc(FB.db, "meta", "config"), data.config);
       if (data.results) batch.set(FB.doc(FB.db, "meta", "results"), data.results);
       if (data.bonusResults) batch.set(FB.doc(FB.db, "meta", "bonusResults"), data.bonusResults);
-      if (data.knockoutR32) batch.set(FB.doc(FB.db, "meta", "knockoutR32"), data.knockoutR32);
+      // Backwards compat: import knockoutR32 (legacy) into the new structure
+      if (data.knockoutR32 && !data.knockouts) {
+        batch.set(FB.doc(FB.db, "meta", "knockout_R32"), data.knockoutR32);
+      }
+      if (data.knockouts) {
+        for (const phaseKey of PHASES_ORDER) {
+          if (data.knockouts[phaseKey]) {
+            batch.set(FB.doc(FB.db, "meta", "knockout_" + phaseKey), data.knockouts[phaseKey]);
+          }
+        }
+      }
       for (const player of data.players) {
         if (!player.name) continue;
         batch.set(FB.doc(FB.db, "players", player.name.toLowerCase()), player);
@@ -393,7 +496,7 @@
       const [players, setPlayers] = useState([]);
       const [results, setResults] = useState({});
       const [bonusResults, setBonusResults] = useState({});
-      const [knockoutR32, setKnockoutR32] = useState({});
+      const [knockouts, setKnockouts] = useState({}); // { R32: {...}, R16: {...}, ... }
       const [loading, setLoading] = useState(true);
       const [savingState, setSavingState] = useState("");
       const [toast, setToast] = useState(null);
@@ -428,11 +531,25 @@
           setBonusResults(snap.exists() ? snap.data() : {});
         }, (err) => console.error(err));
 
-        const u5 = FB.onSnapshot(FB.doc(FB.db, "meta", "knockoutR32"), (snap) => {
-          setKnockoutR32(snap.exists() ? snap.data() : {});
-        }, (err) => console.error(err));
+        // Listener pentru fiecare fază eliminatorie + migrarea datelor vechi knockoutR32
+        const knockoutUnsubs = PHASES_ORDER.map((phaseKey) =>
+          FB.onSnapshot(FB.doc(FB.db, "meta", "knockout_" + phaseKey), (snap) => {
+            setKnockouts((prev) => ({ ...prev, [phaseKey]: snap.exists() ? snap.data() : {} }));
+          }, (err) => console.error("knockout " + phaseKey + " error:", err))
+        );
 
-        return () => { u1(); u2(); u3(); u4(); u5(); };
+        // Migrare automată: dacă există vechiul doc 'knockoutR32', copiem datele și ștergem
+        FB.getDoc(FB.doc(FB.db, "meta", "knockoutR32")).then(async (oldSnap) => {
+          if (oldSnap.exists() && Object.keys(oldSnap.data()).length > 0) {
+            const newSnap = await FB.getDoc(FB.doc(FB.db, "meta", "knockout_R32"));
+            if (!newSnap.exists() || Object.keys(newSnap.data()).length === 0) {
+              // Migrăm doar dacă nu există deja date noi
+              await FB.setDoc(FB.doc(FB.db, "meta", "knockout_R32"), oldSnap.data());
+            }
+          }
+        }).catch((e) => console.warn("Migration check failed:", e));
+
+        return () => { u1(); u2(); u3(); u4(); knockoutUnsubs.forEach((unsub) => unsub()); };
       }, [fbReady]);
 
       const wrapSave = async (fn) => {
@@ -454,10 +571,25 @@
       const deletePlayer = (n) => wrapSave(() => fbDeletePlayer(n));
       const saveResults = (r) => wrapSave(() => fbSaveResults(r));
       const saveBonusResults = (r) => wrapSave(() => fbSaveBonusResults(r));
-      const saveKnockoutR32 = (data) => wrapSave(() => fbSaveKnockoutR32(data));
+      const saveKnockoutPhase = (phaseKey, data) => wrapSave(() => fbSaveKnockoutPhase(phaseKey, data));
 
-      // Lista finală de meciuri R32 (cu echipele setate de admin)
-      const r32Matches = useMemo(() => buildR32Matches(knockoutR32), [knockoutR32]);
+      // Lista meciurilor knockout per fază (cu echipele setate de admin)
+      const knockoutMatches = useMemo(() => {
+        const result = {};
+        for (const phaseKey of PHASES_ORDER) {
+          result[phaseKey] = buildKnockoutMatches(phaseKey, knockouts[phaseKey]);
+        }
+        return result;
+      }, [knockouts]);
+
+      // Listă plată cu toate meciurile knockout READY (pentru calcul punctaje)
+      const allKnockoutMatches = useMemo(() => {
+        const result = [];
+        for (const phaseKey of PHASES_ORDER) {
+          result.push(...knockoutMatches[phaseKey]);
+        }
+        return result;
+      }, [knockoutMatches]);
 
       const isLocked = useMemo(() => {
         if (!config.deadline) return false;
@@ -480,8 +612,8 @@
             else if (pts === config.scoring.outcome) outcome++;
             else wrong++;
           }
-          // Punctaje pentru Optimi 32
-          for (const m of r32Matches) {
+          // Punctaje pentru toate fazele eliminatorii (R32, R16, QF, SF, 3RD, FINAL)
+          for (const m of allKnockoutMatches) {
             if (!m.isReady) continue;
             const pred = p.predictions ? p.predictions[m.n] : null;
             const real = results[m.n];
@@ -497,7 +629,7 @@
           return { name: p.name, total: matchTotal + bonus.total, matchTotal, bonusTotal: bonus.total, bonusBreakdown: bonus.breakdown, exact, diff, outcome, wrong, played };
         });
         return arr.sort((a, b) => b.total - a.total || b.exact - a.exact || b.diff - a.diff);
-      }, [players, results, bonusResults, config.scoring, r32Matches]);
+      }, [players, results, bonusResults, config.scoring, allKnockoutMatches]);
 
       if (!fbReady || loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-stone-400 font-mono text-sm tracking-widest animate-pulse">SE ÎNCARCĂ...</div></div>;
 
@@ -527,10 +659,10 @@
           <Header view={view} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} isAdmin={isAdmin} isLocked={isLocked} savingState={savingState} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
             {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayer={savePlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
-            {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} r32Matches={r32Matches} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
+            {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} knockoutMatches={knockoutMatches} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "bonus" && currentPlayer && <BonusView player={currentPlayer} isLocked={isLocked} bonusResults={bonusResults} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
-            {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} r32Matches={r32Matches} />}
-            {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} knockoutR32={knockoutR32} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} saveKnockoutR32={saveKnockoutR32} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} r32Matches={r32Matches} />}
+            {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
+            {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} knockouts={knockouts} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} saveKnockoutPhase={saveKnockoutPhase} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
           </main>
           <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
             <span style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 16, letterSpacing: "0.1em"}}>WC26 PREDICTOR</span>
@@ -875,8 +1007,8 @@
     }
 
     function PredictView(props) {
-      const { player, isLocked, results, scoring, r32Matches, updatePlayer } = props;
-      const [section, setSection] = useState("groups"); // 'groups' sau 'r32'
+      const { player, isLocked, results, scoring, knockoutMatches, updatePlayer } = props;
+      const [section, setSection] = useState("groups"); // 'groups' sau una din PHASES_ORDER
       const [filter, setFilter] = useState("all");
       const [search, setSearch] = useState("");
 
@@ -886,8 +1018,6 @@
         return true;
       });
       const completed = MATCHES.filter((m) => { const p = player.predictions ? player.predictions[m.n] : null; return p && p.g1 !== "" && p.g2 !== "" && p.g1 != null && p.g2 != null; }).length;
-      const r32Ready = r32Matches.filter((m) => m.isReady).length;
-      const r32Completed = r32Matches.filter((m) => { if (!m.isReady) return false; const p = player.predictions ? player.predictions[m.n] : null; return p && p.g1 !== "" && p.g2 !== "" && p.g1 != null && p.g2 != null; }).length;
 
       const updatePred = (matchN, field, value) => {
         if (isLocked) return;
@@ -897,22 +1027,57 @@
         updatePlayer({ ...player, predictions: newPreds });
       };
 
+      // Calculează stats pentru o fază eliminatorie
+      const getPhaseStats = (phaseKey) => {
+        const matches = knockoutMatches[phaseKey] || [];
+        const ready = matches.filter((m) => m.isReady).length;
+        const compl = matches.filter((m) => {
+          if (!m.isReady) return false;
+          const p = player.predictions ? player.predictions[m.n] : null;
+          return p && p.g1 !== "" && p.g2 !== "" && p.g1 != null && p.g2 != null;
+        }).length;
+        return { total: matches.length, ready, completed: compl };
+      };
+
+      const groupStats = { total: 72, completed };
+
+      // Calculează stats pentru toate fazele
+      const allPhaseStats = {};
+      for (const phaseKey of PHASES_ORDER) {
+        allPhaseStats[phaseKey] = getPhaseStats(phaseKey);
+      }
+
+      const currentPhase = section !== "groups" ? KNOCKOUT_PHASES[section] : null;
+      const currentMatches = currentPhase ? knockoutMatches[section] : [];
+      const currentStats = section !== "groups" ? allPhaseStats[section] : groupStats;
+
       return (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PRONOSTICURI · {player.name.toUpperCase()}</div>
               <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>COMPLETEAZĂ-ȚI <span className="text-amber-400">SCORURILE</span></h2>
-              <p className="text-stone-400 mt-2 text-sm">{isLocked && section === "groups" ? <span className="text-red-400">🔒 Pronosticurile pentru grupe sunt închise.</span> : section === "groups" ? <>72 meciuri faza grupelor · <span className="text-amber-400 font-bold">{completed}/72</span> completate</> : r32Ready === 0 ? <span className="text-purple-300">Echipele R32 vor fi disponibile după faza grupelor</span> : <><span className="text-purple-300 font-bold">{r32Completed}/{r32Ready}</span> pronosticuri R32 completate ({r32Ready}/16 meciuri disponibile)</>}</p>
+              <p className="text-stone-400 mt-2 text-sm">
+                {section === "groups" && (isLocked ? <span className="text-red-400">🔒 Pronosticurile pentru grupe sunt închise.</span> : <>72 meciuri faza grupelor · <span className="text-amber-400 font-bold">{completed}/72</span> completate</>)}
+                {section !== "groups" && currentStats.ready === 0 && <span style={{color: KNOCKOUT_PHASES[section].color.text}}>Echipele {KNOCKOUT_PHASES[section].label} vor fi disponibile când admin-ul le configurează</span>}
+                {section !== "groups" && currentStats.ready > 0 && <><span className="font-bold" style={{color: KNOCKOUT_PHASES[section].color.text}}>{currentStats.completed}/{currentStats.ready}</span> pronosticuri {KNOCKOUT_PHASES[section].label} ({currentStats.ready}/{currentStats.total} disponibile)</>}
+              </p>
             </div>
             {section === "groups" && !isLocked && <div className="bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 min-w-[180px]"><div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES GRUPE</span><span>{Math.round(completed/72*100)}%</span></div><div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{width: (completed/72*100) + "%"}}/></div></div>}
-            {section === "r32" && r32Ready > 0 && <div className="bg-stone-900 border border-purple-500/30 rounded-lg px-4 py-3 min-w-[180px]"><div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES R32</span><span>{r32Ready > 0 ? Math.round(r32Completed/r32Ready*100) : 0}%</span></div><div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all" style={{width: (r32Ready > 0 ? r32Completed/r32Ready*100 : 0) + "%"}}/></div></div>}
+            {section !== "groups" && currentStats.ready > 0 && <div className="bg-stone-900 border rounded-lg px-4 py-3 min-w-[180px]" style={{borderColor: KNOCKOUT_PHASES[section].color.border + "60"}}><div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES {KNOCKOUT_PHASES[section].shortLabel}</span><span>{Math.round(currentStats.completed/currentStats.ready*100)}%</span></div><div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full transition-all" style={{width: (currentStats.completed/currentStats.ready*100) + "%", background: "linear-gradient(to right, " + KNOCKOUT_PHASES[section].color.border + ", " + KNOCKOUT_PHASES[section].color.border + "aa)"}}/></div></div>}
           </div>
 
-          {/* Tab navigation: Groups vs R32 */}
-          <div className="flex gap-2 border-b border-stone-800">
-            <button type="button" onClick={() => setSection("groups")} className={"px-4 py-3 text-xs font-bold tracking-widest transition " + (section === "groups" ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>⚽ FAZA GRUPELOR (72)</button>
-            <button type="button" onClick={() => setSection("r32")} className={"px-4 py-3 text-xs font-bold tracking-widest transition relative " + (section === "r32" ? "border-b-2 border-purple-400 text-purple-300" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>🏆 OPTIMI 32 ({r32Ready}/16){r32Ready === 0 && <span className="ml-1.5 text-[9px] bg-stone-800 px-1.5 py-0.5 rounded">SOON</span>}</button>
+          {/* Tab navigation: Groups + toate fazele eliminatorii */}
+          <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
+            <button type="button" onClick={() => setSection("groups")} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (section === "groups" ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>⚽ GRUPE (72)</button>
+            {PHASES_ORDER.map((phaseKey) => {
+              const phase = KNOCKOUT_PHASES[phaseKey];
+              const stats = allPhaseStats[phaseKey];
+              const isActive = section === phaseKey;
+              return (
+                <button type="button" key={phaseKey} onClick={() => setSection(phaseKey)} className={"px-3 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (isActive ? "border-b-2" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em", color: isActive ? phase.color.text : undefined, borderBottomColor: isActive ? phase.color.border : undefined}}>{phase.icon} {phase.shortLabel} ({stats.ready}/{stats.total}){stats.ready === 0 && <span className="ml-1 text-[9px] bg-stone-800 px-1 py-0.5 rounded">·</span>}</button>
+              );
+            })}
           </div>
 
           {section === "groups" && (
@@ -933,15 +1098,15 @@
             </>
           )}
 
-          {section === "r32" && (
+          {section !== "groups" && currentPhase && (
             <>
-              {r32Ready === 0 ? (
-                <div className="bg-purple-900/20 border border-purple-500/30 rounded-xl p-8 text-center">
+              {currentStats.ready === 0 ? (
+                <div className="border rounded-xl p-8 text-center" style={{backgroundColor: currentPhase.color.bg, borderColor: currentPhase.color.border + "60"}}>
                   <div className="text-5xl mb-3">⏳</div>
-                  <h3 className="text-xl font-black mb-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>OPTIMI 32 - 28 IUNIE - 3 IULIE</h3>
-                  <p className="text-sm text-stone-400 max-w-md mx-auto">Echipele pentru Optimi 32 vor fi disponibile după ce se termină faza grupelor (28 iunie 2026). Vei putea pronostica fiecare meci în parte, pe măsură ce admin-ul introduce echipele calificate.</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-6 max-w-md mx-auto">
-                    {KNOCKOUT_R32.map((m) => (
+                  <h3 className="text-xl font-black mb-2" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>{currentPhase.icon} {currentPhase.label}</h3>
+                  <p className="text-sm text-stone-400 max-w-md mx-auto">Echipele pentru {currentPhase.label} vor fi disponibile când admin-ul le configurează (după runda anterioară).</p>
+                  <div className={"grid gap-2 mt-6 max-w-md mx-auto " + (currentPhase.matches.length === 1 ? "grid-cols-1" : currentPhase.matches.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
+                    {currentPhase.matches.map((m) => (
                       <div key={m.n} className="bg-stone-900/60 border border-stone-800 rounded-md px-2 py-2 text-[10px] font-mono text-stone-500">
                         <div className="text-stone-400 font-bold">M{m.n}</div>
                         <div className="text-stone-600">{m.d} · {m.t}</div>
@@ -951,12 +1116,12 @@
                 </div>
               ) : (
                 <>
-                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
-                    <div className="font-bold text-purple-300 text-sm">🏆 Optimi 32 · 16 meciuri eliminatorii</div>
+                  <div className="border rounded-lg p-4" style={{backgroundColor: currentPhase.color.bg, borderColor: currentPhase.color.border + "60"}}>
+                    <div className="font-bold text-sm" style={{color: currentPhase.color.text}}>{currentPhase.icon} {currentPhase.label} · {currentPhase.matches.length} {currentPhase.matches.length === 1 ? "meci" : "meciuri"} eliminatorii</div>
                     <div className="text-xs text-stone-400 mt-1">Pronostichezi scorul după 90/120 de minute. Aceleași punctaje ca la grupe.</div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {r32Matches.map((m) => m.isReady ? <MatchCard key={m.n} match={m} pred={player.predictions ? player.predictions[m.n] : null} real={results[m.n]} scoring={scoring} isLocked={false} onUpdate={updatePred} /> : <KnockoutPlaceholder key={m.n} match={m} />)}
+                  <div className={"grid gap-3 " + (currentPhase.matches.length === 1 ? "grid-cols-1 max-w-md mx-auto" : "grid-cols-1 md:grid-cols-2")}>
+                    {currentMatches.map((m) => m.isReady ? <MatchCard key={m.n} match={m} pred={player.predictions ? player.predictions[m.n] : null} real={results[m.n]} scoring={scoring} isLocked={false} onUpdate={updatePred} /> : <KnockoutPlaceholder key={m.n} match={m} />)}
                   </div>
                 </>
               )}
@@ -972,14 +1137,14 @@
         <div className="rounded-xl border bg-stone-900/30 backdrop-blur p-4" style={{borderColor: "#44403c", borderStyle: "dashed"}}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest bg-stone-800 text-stone-500">R32 · M{m.n}</span>
+              <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest bg-stone-800 text-stone-500">{m.phaseLabel} · M{m.n}</span>
             </div>
             <div className="text-[10px] text-stone-500 font-mono tracking-wider">{m.d} · {m.t}</div>
           </div>
           <div className="text-center py-6">
             <div className="text-2xl mb-2">⏳</div>
             <div className="text-xs text-stone-400 font-mono">{m.desc}</div>
-            <div className="text-[10px] text-stone-600 mt-2 italic">Echipele se determină după grupe</div>
+            <div className="text-[10px] text-stone-600 mt-2 italic">Echipele se determină după runda anterioară</div>
           </div>
         </div>
       );
@@ -1002,7 +1167,7 @@
       const inputBg = isLocked ? "#1c1917" : "#fef3c7";
       const inputColor = isLocked ? "#fef3c7" : "#0c0a09";
       const inputBorder = "2px solid " + (isLocked ? "#44403c" : "#fbbf24");
-      const labelText = isKnockout ? "R32" : "GR. " + m.g;
+      const labelText = isKnockout ? (m.phaseLabel || "KO") : "GR. " + m.g;
       return (
         <div className="rounded-xl border bg-stone-900/60 backdrop-blur p-4 transition" style={{borderColor: c.border + "60"}}>
           <div className="flex items-center justify-between mb-3">
@@ -1134,16 +1299,17 @@
     }
 
     function LeaderboardView(props) {
-      const { standings, players, results, bonusResults, scoring, r32Matches } = props;
+      const { standings, players, results, bonusResults, scoring, knockoutMatches, allKnockoutMatches } = props;
       const [showDetail, setShowDetail] = useState(null);
       const matchesPlayed = MATCHES.filter((m) => results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
-      const r32Played = (r32Matches || []).filter((m) => m.isReady && results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
+      const koPlayed = (allKnockoutMatches || []).filter((m) => m.isReady && results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
+      const koReady = (allKnockoutMatches || []).filter((m) => m.isReady).length;
       return (
         <div className="space-y-6">
           <div>
             <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">CLASAMENT GENERAL</div>
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CINE-I <span className="text-amber-400">CEL MAI BUN?</span></h2>
-            <p className="text-stone-400 text-sm mt-2">Grupe: {matchesPlayed}/72{r32Played > 0 && <> · R32: {r32Played}/16</>} · {players.length} jucători înscriși</p>
+            <p className="text-stone-400 text-sm mt-2">Grupe: {matchesPlayed}/72{koReady > 0 && <> · Eliminatorii: {koPlayed}/{koReady}</>} · {players.length} jucători înscriși</p>
           </div>
           {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă.</div>
           : <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl overflow-hidden">
@@ -1178,7 +1344,7 @@
                         </div>
                       </div>
                     </button>
-                    {showDetail === s.name && player && <PlayerDetail player={player} results={results} bonusResults={bonusResults} scoring={scoring} standing={s} r32Matches={r32Matches} />}
+                    {showDetail === s.name && player && <PlayerDetail player={player} results={results} bonusResults={bonusResults} scoring={scoring} standing={s} knockoutMatches={knockoutMatches} />}
                   </div>
                 );
               })}
@@ -1188,10 +1354,29 @@
     }
 
     function PlayerDetail(props) {
-      const { player, results, bonusResults, scoring, standing, r32Matches } = props;
+      const { player, results, bonusResults, scoring, standing, knockoutMatches } = props;
       const bonus = player.bonus || {};
       const hasBonusAnswered = bonus.champion || bonus.finalist || bonus.topScorer || bonus.surprise || bonus.mostGoalsAgainst;
-      const readyR32 = (r32Matches || []).filter((m) => m.isReady);
+
+      const renderMatchRow = (m, isKnockout) => {
+        const pred = player.predictions ? player.predictions[m.n] : null;
+        const real = results[m.n];
+        const pts = calcPoints(pred, real, scoring);
+        const c = groupColors[isKnockout ? m.g : m.g];
+        let badge = "";
+        if (pts === scoring.exact) badge = "bg-amber-400 text-stone-950";
+        else if (pts === scoring.diff) badge = "bg-emerald-500 text-stone-950";
+        else if (pts === scoring.outcome) badge = "bg-sky-500 text-white";
+        else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
+        const matchPrefix = isKnockout ? (m.phaseLabel + "·M" + m.n) : "M" + m.n;
+        return (
+          <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + "40"}}>
+            <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono" style={{color: isKnockout ? c.text : "#78716c"}}>{matchPrefix}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{(m.e1 || "").slice(0,3)} – {(m.e2 || "").slice(0,3)}{m.f2}</span></div>
+            <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
+          </div>
+        );
+      };
+
       return (
         <div className="bg-stone-950/50 border-b border-stone-800 px-4 py-4 space-y-4">
           {hasBonusAnswered && (
@@ -1207,50 +1392,24 @@
             </div>
           )}
           <div>
-            <div className="text-xs tracking-widest font-mono text-stone-500 mb-2">PRONOSTICURI MECIURI · {standing.matchTotal} PCT</div>
+            <div className="text-xs tracking-widest font-mono text-stone-500 mb-2">PRONOSTICURI FAZA GRUPELOR · {standing.matchTotal} PCT TOTAL</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {MATCHES.map((m) => {
-                const pred = player.predictions ? player.predictions[m.n] : null;
-                const real = results[m.n];
-                const pts = calcPoints(pred, real, scoring);
-                const c = groupColors[m.g];
-                let badge = "";
-                if (pts === scoring.exact) badge = "bg-amber-400 text-stone-950";
-                else if (pts === scoring.diff) badge = "bg-emerald-500 text-stone-950";
-                else if (pts === scoring.outcome) badge = "bg-sky-500 text-white";
-                else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
-                return (
-                  <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + "40"}}>
-                    <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono text-stone-500">M{m.n}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span></div>
-                    <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
-                  </div>
-                );
-              })}
+              {MATCHES.map((m) => renderMatchRow(m, false))}
             </div>
           </div>
-          {readyR32.length > 0 && (
-            <div>
-              <div className="text-xs tracking-widest font-mono text-purple-400 mb-2">🏆 PRONOSTICURI OPTIMI 32</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {readyR32.map((m) => {
-                  const pred = player.predictions ? player.predictions[m.n] : null;
-                  const real = results[m.n];
-                  const pts = calcPoints(pred, real, scoring);
-                  let badge = "";
-                  if (pts === scoring.exact) badge = "bg-amber-400 text-stone-950";
-                  else if (pts === scoring.diff) badge = "bg-emerald-500 text-stone-950";
-                  else if (pts === scoring.outcome) badge = "bg-sky-500 text-white";
-                  else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
-                  return (
-                    <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: "#8b5cf640"}}>
-                      <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono text-purple-400">R32·M{m.n}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span></div>
-                      <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
-                    </div>
-                  );
-                })}
+          {PHASES_ORDER.map((phaseKey) => {
+            const phase = KNOCKOUT_PHASES[phaseKey];
+            const readyMatches = (knockoutMatches[phaseKey] || []).filter((m) => m.isReady);
+            if (readyMatches.length === 0) return null;
+            return (
+              <div key={phaseKey}>
+                <div className="text-xs tracking-widest font-mono mb-2" style={{color: phase.color.text}}>{phase.icon} {phase.label}</div>
+                <div className={"grid gap-2 " + (readyMatches.length === 1 ? "grid-cols-1 max-w-md" : readyMatches.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")}>
+                  {readyMatches.map((m) => renderMatchRow(m, true))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       );
     }
@@ -1280,10 +1439,10 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
           </div>
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["results", "🥅 REZULTATE"], ["r32", "🏆 OPTIMI 32"], ["bonus", "⭐ BONUS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
+            {[["results", "🥅 REZULTATE"], ["knockout", "🏆 ELIMINATORII"], ["bonus", "⭐ BONUS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
           </div>
-          {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} r32Matches={props.r32Matches} />}
-          {tab === "r32" && <AdminKnockoutR32 knockoutR32={props.knockoutR32} saveKnockoutR32={props.saveKnockoutR32} showToast={props.showToast} />}
+          {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} allKnockoutMatches={props.allKnockoutMatches} />}
+          {tab === "knockout" && <AdminKnockoutPhases knockouts={props.knockouts} saveKnockoutPhase={props.saveKnockoutPhase} showToast={props.showToast} />}
           {tab === "bonus" && <AdminBonus bonusResults={props.bonusResults} saveBonusResults={props.saveBonusResults} showToast={props.showToast} />}
           {tab === "settings" && <AdminSettings config={props.config} saveConfig={props.saveConfig} showToast={props.showToast} askConfirm={props.askConfirm} />}
           {tab === "players" && <AdminPlayers players={props.players} deletePlayer={props.deletePlayer} askConfirm={props.askConfirm} showToast={props.showToast} />}
@@ -1291,11 +1450,39 @@
       );
     }
 
-    function AdminKnockoutR32(props) {
-      const { knockoutR32, saveKnockoutR32, showToast } = props;
-      const [pending, setPending] = useState(knockoutR32);
+    function AdminKnockoutPhases(props) {
+      const { knockouts, saveKnockoutPhase, showToast } = props;
+      const [activePhase, setActivePhase] = useState("R32");
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-stone-900/60 border border-stone-800 rounded-lg p-4">
+            <div className="text-xs tracking-[0.25em] text-stone-500 font-mono mb-3">SELECTEAZĂ FAZA</div>
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap no-scrollbar">
+              {PHASES_ORDER.map((phaseKey) => {
+                const phase = KNOCKOUT_PHASES[phaseKey];
+                const isActive = activePhase === phaseKey;
+                const phaseData = knockouts[phaseKey] || {};
+                const configured = phase.matches.filter((m) => phaseData[m.n] && phaseData[m.n].e1 && phaseData[m.n].e2).length;
+                return (
+                  <button type="button" key={phaseKey} onClick={() => setActivePhase(phaseKey)} className={"px-3 py-2 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 transition " + (isActive ? "text-stone-950" : "")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: isActive ? phase.color.border : "transparent", border: "1px solid " + phase.color.border, color: isActive ? "#0c0a09" : phase.color.text}}>
+                    {phase.icon} {phase.shortLabel} ({configured}/{phase.matches.length})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <AdminPhaseEditor phaseKey={activePhase} phaseData={knockouts[activePhase] || {}} saveKnockoutPhase={saveKnockoutPhase} showToast={showToast} />
+        </div>
+      );
+    }
+
+    function AdminPhaseEditor(props) {
+      const { phaseKey, phaseData, saveKnockoutPhase, showToast } = props;
+      const phase = KNOCKOUT_PHASES[phaseKey];
+      const [pending, setPending] = useState(phaseData);
       const [dirty, setDirty] = useState(false);
-      useEffect(() => { setPending(knockoutR32); setDirty(false); }, [knockoutR32]);
+      useEffect(() => { setPending(phaseData); setDirty(false); }, [phaseData, phaseKey]);
 
       const updateTeam = (matchN, side, teamName) => {
         const team = TEAMS.find((t) => t.name === teamName);
@@ -1318,32 +1505,29 @@
           const v = pending[k];
           if (v && (v.e1 || v.e2)) clean[k] = { e1: v.e1 || "", e2: v.e2 || "", f1: v.f1 || "", f2: v.f2 || "" };
         }
-        const ok = await saveKnockoutR32(clean);
-        if (ok) { setDirty(false); showToast("Echipe Optimi 32 salvate."); }
+        const ok = await saveKnockoutPhase(phaseKey, clean);
+        if (ok) { setDirty(false); showToast("Echipe " + phase.label + " salvate."); }
       };
 
-      const completedMatches = KNOCKOUT_R32.filter((m) => {
-        const p = pending[m.n];
-        return p && p.e1 && p.e2;
-      }).length;
+      const configured = phase.matches.filter((m) => pending[m.n] && pending[m.n].e1 && pending[m.n].e2).length;
 
       return (
         <div className="space-y-4">
-          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="border rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between" style={{backgroundColor: phase.color.bg, borderColor: phase.color.border + "60"}}>
             <div>
-              <div className="font-bold text-purple-300">🏆 {completedMatches}/16 meciuri configurate</div>
-              <div className="text-xs text-stone-400 mt-1">Setează echipele pentru fiecare meci după ce se termină grupele (28 iunie). Jucătorii pot pronostica imediat ce salvezi.</div>
+              <div className="font-bold" style={{color: phase.color.text}}>{phase.icon} {phase.label} · {configured}/{phase.matches.length} configurate</div>
+              <div className="text-xs text-stone-400 mt-1">Setează echipele după ce se termină faza anterioară. Jucătorii pot pronostica imediat ce salvezi.</div>
             </div>
             {dirty && <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-5 py-2.5 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>💾 SALVEAZĂ</button>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {KNOCKOUT_R32.map((m) => {
+          <div className={"grid gap-3 " + (phase.matches.length === 1 ? "grid-cols-1 max-w-md" : phase.matches.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-3xl" : "grid-cols-1 md:grid-cols-2")}>
+            {phase.matches.map((m) => {
               const p = pending[m.n] || {};
               return (
-                <div key={m.n} className="rounded-xl border bg-stone-900/60 p-4" style={{borderColor: "#8b5cf640"}}>
+                <div key={m.n} className="rounded-xl border bg-stone-900/60 p-4" style={{borderColor: phase.color.border + "40"}}>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest bg-purple-500/15 text-purple-300 border border-purple-500/40">R32 · M{m.n}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest border" style={{backgroundColor: phase.color.bg, color: phase.color.text, borderColor: phase.color.border + "40"}}>{phase.shortLabel} · M{m.n}</span>
                     <span className="text-[10px] text-stone-500 font-mono">{m.d} · {m.t}</span>
                   </div>
                   <div className="text-[10px] text-stone-500 italic mb-3">{m.desc}</div>
@@ -1374,7 +1558,7 @@
     }
 
     function AdminResults(props) {
-      const { results, saveResults, showToast, r32Matches } = props;
+      const { results, saveResults, showToast, allKnockoutMatches } = props;
       const [filter, setFilter] = useState("all");
       const [pendingResults, setPendingResults] = useState(results);
       const [dirty, setDirty] = useState(false);
@@ -1393,32 +1577,46 @@
         const ok = await saveResults(clean);
         if (ok) { setDirty(false); showToast("Rezultate salvate. Punctajele s-au actualizat."); }
       };
-      // Combinăm meciurile din grupe cu cele din R32 (doar cele cu echipe setate)
-      const allMatches = [...MATCHES, ...(r32Matches || []).filter((m) => m.isReady)];
+      // Combinăm meciurile din grupe cu cele din fazele eliminatorii (doar cele cu echipe setate)
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
       const filtered = allMatches.filter((m) => {
         if (filter === "all") return true;
-        if (filter === "R32") return m.isKnockout;
+        if (PHASES_ORDER.includes(filter)) return m.isKnockout && m.g === filter;
         return !m.isKnockout && m.g === filter;
       });
       const completed = MATCHES.filter((m) => pendingResults[m.n] && pendingResults[m.n].g1 !== "" && pendingResults[m.n].g2 !== "" && pendingResults[m.n].g1 != null && pendingResults[m.n].g2 != null).length;
-      const r32Completed = (r32Matches || []).filter((m) => m.isReady && pendingResults[m.n] && pendingResults[m.n].g1 !== "" && pendingResults[m.n].g2 !== "" && pendingResults[m.n].g1 != null && pendingResults[m.n].g2 != null).length;
-      const r32Ready = (r32Matches || []).filter((m) => m.isReady).length;
+      // Stats per fază eliminatorie
+      const phaseStats = {};
+      for (const phaseKey of PHASES_ORDER) {
+        const phaseMatches = (allKnockoutMatches || []).filter((m) => m.isReady && m.g === phaseKey);
+        const phaseCompleted = phaseMatches.filter((m) => pendingResults[m.n] && pendingResults[m.n].g1 !== "" && pendingResults[m.n].g2 !== "" && pendingResults[m.n].g1 != null && pendingResults[m.n].g2 != null).length;
+        phaseStats[phaseKey] = { ready: phaseMatches.length, completed: phaseCompleted };
+      }
+      const totalKoReady = Object.values(phaseStats).reduce((sum, s) => sum + s.ready, 0);
+      const totalKoCompleted = Object.values(phaseStats).reduce((sum, s) => sum + s.completed, 0);
       return (
         <div className="space-y-4">
           <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div><div className="font-bold text-emerald-300">📊 Grupe: {completed}/72 · R32: {r32Completed}/{r32Ready}</div><div className="text-xs text-stone-400 mt-1">Punctajele se actualizează automat după salvare.</div></div>
+            <div><div className="font-bold text-emerald-300">📊 Grupe: {completed}/72{totalKoReady > 0 && <> · Eliminatorii: {totalKoCompleted}/{totalKoReady}</>}</div><div className="text-xs text-stone-400 mt-1">Punctajele se actualizează automat după salvare.</div></div>
             {dirty && <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-5 py-2.5 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>💾 SALVEAZĂ</button>}
           </div>
           <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
             <button type="button" onClick={() => setFilter("all")} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter==="all" ? "bg-amber-400 text-stone-950" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
             {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>)}
-            {r32Ready > 0 && <button type="button" onClick={() => setFilter("R32")} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter==="R32" ? "text-stone-950" : "text-purple-300")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter==="R32" ? "#8b5cf6" : "transparent", border: "1px solid #8b5cf6"}}>R32</button>}
+            {PHASES_ORDER.map((phaseKey) => {
+              if (phaseStats[phaseKey].ready === 0) return null;
+              const phase = KNOCKOUT_PHASES[phaseKey];
+              const isActive = filter === phaseKey;
+              return (
+                <button type="button" key={phaseKey} onClick={() => setFilter(phaseKey)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (isActive ? "text-stone-950" : "")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: isActive ? phase.color.border : "transparent", border: "1px solid " + phase.color.border, color: isActive ? "#0c0a09" : phase.color.text}}>{phase.icon} {phase.shortLabel}</button>
+              );
+            })}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filtered.map((m) => {
               const r = pendingResults[m.n];
-              const c = groupColors[m.isKnockout ? "R32" : m.g];
-              const badgeLabel = m.isKnockout ? "R32 · M" + m.n : "GR. " + m.g + " · M" + m.n;
+              const c = groupColors[m.isKnockout ? m.g : m.g];
+              const badgeLabel = m.isKnockout ? (m.phaseLabel + " · M" + m.n) : ("GR. " + m.g + " · M" + m.n);
               return (
                 <div key={m.n} className="rounded-xl border bg-stone-900/60 p-4" style={{borderColor: c.border + "40"}}>
                   <div className="flex items-center justify-between mb-3"><span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text}}>{badgeLabel}</span><span className="text-[10px] text-stone-500 font-mono">{m.d} · {m.t}</span></div>
@@ -1431,6 +1629,7 @@
               );
             })}
           </div>
+          {filtered.length === 0 && <div className="text-center py-12 text-stone-500 italic">Pentru această fază nu sunt încă echipe configurate.</div>}
           {dirty && <div className="sticky bottom-4 flex justify-end"><button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shadow-2xl shadow-amber-500/30" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em"}}>💾 SALVEAZĂ MODIFICĂRILE</button></div>}
         </div>
       );
