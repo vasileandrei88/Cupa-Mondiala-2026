@@ -131,8 +131,54 @@
       { n: 72, d: "28.06", t: "05:00", g: "J", e1: "Iordania", e2: "Argentina", f1: "🇯🇴", f2: "🇦🇷" }
     ];
 
+    // Toate cele 48 de echipe la CM 2026, alfabetic, cu drapele
+    const TEAMS = [
+      { name: "Africa de Sud", flag: "🇿🇦" }, { name: "Algeria", flag: "🇩🇿" }, { name: "Anglia", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+      { name: "Arabia Saudită", flag: "🇸🇦" }, { name: "Argentina", flag: "🇦🇷" }, { name: "Australia", flag: "🇦🇺" },
+      { name: "Austria", flag: "🇦🇹" }, { name: "Belgia", flag: "🇧🇪" }, { name: "Bosnia & H.", flag: "🇧🇦" },
+      { name: "Brazilia", flag: "🇧🇷" }, { name: "Canada", flag: "🇨🇦" }, { name: "Capul Verde", flag: "🇨🇻" },
+      { name: "Cehia", flag: "🇨🇿" }, { name: "Coasta de Fildeș", flag: "🇨🇮" }, { name: "Columbia", flag: "🇨🇴" },
+      { name: "Coreea de Sud", flag: "🇰🇷" }, { name: "Croația", flag: "🇭🇷" }, { name: "Curaçao", flag: "🇨🇼" },
+      { name: "Ecuador", flag: "🇪🇨" }, { name: "Egipt", flag: "🇪🇬" }, { name: "Elveția", flag: "🇨🇭" },
+      { name: "Franța", flag: "🇫🇷" }, { name: "Germania", flag: "🇩🇪" }, { name: "Ghana", flag: "🇬🇭" },
+      { name: "Haiti", flag: "🇭🇹" }, { name: "Iordania", flag: "🇯🇴" }, { name: "Iran", flag: "🇮🇷" },
+      { name: "Irak", flag: "🇮🇶" }, { name: "Japonia", flag: "🇯🇵" }, { name: "Maroc", flag: "🇲🇦" },
+      { name: "Mexic", flag: "🇲🇽" }, { name: "Norvegia", flag: "🇳🇴" }, { name: "Noua Zeelandă", flag: "🇳🇿" },
+      { name: "Olanda", flag: "🇳🇱" }, { name: "Panama", flag: "🇵🇦" }, { name: "Paraguay", flag: "🇵🇾" },
+      { name: "Portugalia", flag: "🇵🇹" }, { name: "Qatar", flag: "🇶🇦" }, { name: "RD Congo", flag: "🇨🇩" },
+      { name: "Scoția", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Spania", flag: "🇪🇸" },
+      { name: "SUA", flag: "🇺🇸" }, { name: "Suedia", flag: "🇸🇪" }, { name: "Tunisia", flag: "🇹🇳" },
+      { name: "Turcia", flag: "🇹🇷" }, { name: "Uruguay", flag: "🇺🇾" }, { name: "Uzbekistan", flag: "🇺🇿" }
+    ];
+
+    // Top favoriți la golgheter (cote bookmakers, mai 2026)
+    const TOP_SCORERS = [
+      "Kylian Mbappé (Franța)", "Harry Kane (Anglia)", "Erling Haaland (Norvegia)",
+      "Lionel Messi (Argentina)", "Lamine Yamal (Spania)", "Cristiano Ronaldo (Portugalia)",
+      "Vinícius Jr. (Brazilia)", "Lautaro Martínez (Argentina)", "Julián Álvarez (Argentina)",
+      "Jude Bellingham (Anglia)", "Bukayo Saka (Anglia)", "Cole Palmer (Anglia)",
+      "Phil Foden (Anglia)", "Michael Olise (Franța)", "Florian Wirtz (Germania)",
+      "Romelu Lukaku (Belgia)", "Jeremy Doku (Belgia)", "Mohamed Salah (Egipt)",
+      "Sadio Mané (Senegal)", "Victor Osimhen (Nigeria - n/a)", "Achraf Hakimi (Maroc)",
+      "Son Heung-min (Coreea de Sud)", "Arda Güler (Turcia)", "Christian Pulisic (SUA)",
+      "Alphonso Davies (Canada)", "Raphinha (Brazilia)", "Rodrygo (Brazilia)",
+      "Bruno Fernandes (Portugalia)", "Mikel Oyarzabal (Spania)", "Kai Havertz (Germania)"
+    ];
+
+    // "Echipe favorite" (NU pot fi surpriză - top 8 bookmakers)
+    const FAVORITE_TEAMS = ["Argentina", "Brazilia", "Franța", "Anglia", "Spania", "Germania", "Portugalia", "Olanda"];
+
     const DEFAULT_SCORING = { exact: 5, diff: 3, outcome: 2, wrong: 0 };
     const DEFAULT_DEADLINE = "2026-06-11T20:00";
+
+    // Punctaje întrebări bonus (dublate față de original)
+    const BONUS_POINTS = {
+      champion: 20,        // câștigător turneu
+      finalist: 10,        // finalistă învinsă
+      topScorer: 16,       // golgheter
+      surprise: 10,        // echipa surpriză (semifinalistă non-favorită)
+      mostGoalsAgainst: 6  // echipa cu cele mai multe goluri primite în grupe
+    };
 
     function calcPoints(pred, real, scoring) {
       if (!pred || pred.g1 === "" || pred.g2 === "" || pred.g1 == null || pred.g2 == null) return null;
@@ -143,6 +189,35 @@
       const ps = Math.sign(pg1 - pg2), rs = Math.sign(rg1 - rg2);
       if (ps === rs) return scoring.outcome;
       return scoring.wrong;
+    }
+
+    // Calculează punctele bonus pentru un jucător
+    function calcBonusPoints(playerBonus, bonusResults) {
+      if (!playerBonus || !bonusResults) return { total: 0, breakdown: {} };
+      const breakdown = {};
+      let total = 0;
+
+      if (bonusResults.champion && playerBonus.champion === bonusResults.champion) {
+        breakdown.champion = BONUS_POINTS.champion;
+        total += BONUS_POINTS.champion;
+      }
+      if (bonusResults.finalist && playerBonus.finalist === bonusResults.finalist) {
+        breakdown.finalist = BONUS_POINTS.finalist;
+        total += BONUS_POINTS.finalist;
+      }
+      if (bonusResults.topScorer && playerBonus.topScorer && bonusResults.topScorer.toLowerCase().trim() === playerBonus.topScorer.toLowerCase().trim()) {
+        breakdown.topScorer = BONUS_POINTS.topScorer;
+        total += BONUS_POINTS.topScorer;
+      }
+      if (bonusResults.surprise && playerBonus.surprise === bonusResults.surprise) {
+        breakdown.surprise = BONUS_POINTS.surprise;
+        total += BONUS_POINTS.surprise;
+      }
+      if (bonusResults.mostGoalsAgainst && playerBonus.mostGoalsAgainst === bonusResults.mostGoalsAgainst) {
+        breakdown.mostGoalsAgainst = BONUS_POINTS.mostGoalsAgainst;
+        total += BONUS_POINTS.mostGoalsAgainst;
+      }
+      return { total, breakdown };
     }
 
     const groupColors = {
@@ -173,6 +248,7 @@
 
     async function fbSaveConfig(cfg) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "config"), cfg); }
     async function fbSaveResults(r) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "results"), r); }
+    async function fbSaveBonusResults(r) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "bonusResults"), r); }
     async function fbSavePlayer(p) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "players", p.name.toLowerCase()), p); }
     async function fbDeletePlayer(name) { const FB = window.__FB__; await FB.deleteDoc(FB.doc(FB.db, "players", name.toLowerCase())); }
 
@@ -221,6 +297,7 @@
       const [config, setConfig] = useState({ adminPassword: "", deadline: DEFAULT_DEADLINE, scoring: DEFAULT_SCORING, initialized: false });
       const [players, setPlayers] = useState([]);
       const [results, setResults] = useState({});
+      const [bonusResults, setBonusResults] = useState({});
       const [loading, setLoading] = useState(true);
       const [savingState, setSavingState] = useState("");
       const [toast, setToast] = useState(null);
@@ -230,7 +307,6 @@
       const showToast = useCallback((message, type) => setToast({ message, type: type || "success" }), []);
       const askConfirm = useCallback((title, message, onConfirm, danger) => setConfirmDlg({ title, message, onConfirm, danger: !!danger }), []);
 
-      // Sincronizare instantă cu Firestore
       useEffect(() => {
         if (!fbReady) return;
         const FB = window.__FB__;
@@ -252,7 +328,11 @@
           playersLoaded = true; checkLoaded();
         }, (err) => { console.error(err); setFatalError(err.message); setLoading(false); });
 
-        return () => { u1(); u2(); u3(); };
+        const u4 = FB.onSnapshot(FB.doc(FB.db, "meta", "bonusResults"), (snap) => {
+          setBonusResults(snap.exists() ? snap.data() : {});
+        }, (err) => console.error(err));
+
+        return () => { u1(); u2(); u3(); u4(); };
       }, [fbReady]);
 
       const wrapSave = async (fn) => {
@@ -273,6 +353,7 @@
       const savePlayer = (p) => wrapSave(() => fbSavePlayer(p));
       const deletePlayer = (n) => wrapSave(() => fbDeletePlayer(n));
       const saveResults = (r) => wrapSave(() => fbSaveResults(r));
+      const saveBonusResults = (r) => wrapSave(() => fbSaveBonusResults(r));
 
       const isLocked = useMemo(() => {
         if (!config.deadline) return false;
@@ -282,22 +363,23 @@
 
       const standings = useMemo(() => {
         const arr = players.map((p) => {
-          let total = 0, exact = 0, diff = 0, outcome = 0, wrong = 0, played = 0;
+          let matchTotal = 0, exact = 0, diff = 0, outcome = 0, wrong = 0, played = 0;
           for (const m of MATCHES) {
             const pred = p.predictions ? p.predictions[m.n] : null;
             const real = results[m.n];
             const pts = calcPoints(pred, real, config.scoring);
             if (pts == null) continue;
-            played++; total += pts;
+            played++; matchTotal += pts;
             if (pts === config.scoring.exact) exact++;
             else if (pts === config.scoring.diff) diff++;
             else if (pts === config.scoring.outcome) outcome++;
             else wrong++;
           }
-          return { name: p.name, total, exact, diff, outcome, wrong, played };
+          const bonus = calcBonusPoints(p.bonus, bonusResults);
+          return { name: p.name, total: matchTotal + bonus.total, matchTotal, bonusTotal: bonus.total, bonusBreakdown: bonus.breakdown, exact, diff, outcome, wrong, played };
         });
         return arr.sort((a, b) => b.total - a.total || b.exact - a.exact || b.diff - a.diff);
-      }, [players, results, config.scoring]);
+      }, [players, results, bonusResults, config.scoring]);
 
       if (!fbReady || loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-stone-400 font-mono text-sm tracking-widest animate-pulse">SE ÎNCARCĂ...</div></div>;
 
@@ -328,8 +410,9 @@
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
             {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayer={savePlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
             {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
-            {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} scoring={config.scoring} />}
-            {view === "admin" && isAdmin && <AdminView config={config} results={results} saveConfig={saveConfig} saveResults={saveResults} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} />}
+            {view === "bonus" && currentPlayer && <BonusView player={currentPlayer} isLocked={isLocked} bonusResults={bonusResults} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
+            {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} />}
+            {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} />}
           </main>
           <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
             <span style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 16, letterSpacing: "0.1em"}}>WC26 PREDICTOR</span>
@@ -357,6 +440,7 @@
               <nav className="hidden md:flex items-center gap-1">
                 <NavBtn active={view==="home"} onClick={() => setView("home")}>ACASĂ</NavBtn>
                 {currentPlayer && <NavBtn active={view==="predict"} onClick={() => setView("predict")}>PRONOSTICURI</NavBtn>}
+                {currentPlayer && <NavBtn active={view==="bonus"} onClick={() => setView("bonus")}>BONUS</NavBtn>}
                 <NavBtn active={view==="leaderboard"} onClick={() => setView("leaderboard")}>CLASAMENT</NavBtn>
                 {isAdmin && <NavBtn active={view==="admin"} onClick={() => setView("admin")}>ADMIN</NavBtn>}
               </nav>
@@ -369,6 +453,7 @@
             <div className="md:hidden flex gap-1 pb-3 -mx-1 overflow-x-auto no-scrollbar">
               <NavBtn active={view==="home"} onClick={() => setView("home")}>ACASĂ</NavBtn>
               {currentPlayer && <NavBtn active={view==="predict"} onClick={() => setView("predict")}>PRONOSTICURI</NavBtn>}
+              {currentPlayer && <NavBtn active={view==="bonus"} onClick={() => setView("bonus")}>BONUS</NavBtn>}
               <NavBtn active={view==="leaderboard"} onClick={() => setView("leaderboard")}>CLASAMENT</NavBtn>
               {isAdmin && <NavBtn active={view==="admin"} onClick={() => setView("admin")}>ADMIN</NavBtn>}
             </div>
@@ -455,6 +540,41 @@
       );
     }
 
+    function PrizesCard() {
+      return (
+        <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 backdrop-blur border border-amber-500/20 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-3xl">💰</div>
+            <div>
+              <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PREMII CONCURS</div>
+              <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>FOND TOTAL · 300 RON</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-amber-400 to-yellow-500 rounded-lg p-4 text-stone-950 relative overflow-hidden">
+              <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥇</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>180</div>
+              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 1</div>
+              <div className="text-[10px] mt-1 opacity-70 font-mono">câștigătorul concursului</div>
+            </div>
+            <div className="bg-gradient-to-br from-stone-300 to-stone-400 rounded-lg p-4 text-stone-950 relative overflow-hidden">
+              <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥈</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>90</div>
+              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 2</div>
+              <div className="text-[10px] mt-1 opacity-70 font-mono">vicecampion</div>
+            </div>
+            <div className="bg-gradient-to-br from-stone-700 to-stone-800 rounded-lg p-4 text-stone-200 relative overflow-hidden">
+              <div className="text-4xl absolute -top-1 -right-1 opacity-30">🥄</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>30</div>
+              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL ULTIMUL</div>
+              <div className="text-[10px] mt-1 opacity-70 font-mono">"wooden spoon" 🤣</div>
+            </div>
+          </div>
+          <div className="text-[10px] text-stone-500 mt-4 font-mono">Miza: 50 RON / persoană · 6 jucători · Premiu garantat pentru ultimul ca să nu plece nimeni cu mâna goală :)</div>
+        </div>
+      );
+    }
+
     function HomeView(props) {
       const { config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayer, isAdmin, setIsAdmin, adminPassword, showToast } = props;
       const [showLogin, setShowLogin] = useState(false);
@@ -489,13 +609,17 @@
               </div>
             </div>
           </div>
+
+          <PrizesCard />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <InfoCard icon="🏆" label="LIDER" value={standings[0] && standings[0].played > 0 ? standings[0].name : "—"} subValue={standings[0] && standings[0].played > 0 ? standings[0].total + " pct" : "încă nu sunt rezultate"} accent="amber" />
             <InfoCard icon="👥" label="JUCĂTORI" value={String(players.length)} subValue={isLocked ? "pronosticuri închise" : "mai poți înscrie până la deadline"} accent="sky" />
             <InfoCard icon="📅" label="URMĂTORUL MECI" value={upcoming.f1 + " " + upcoming.e1 + " – " + upcoming.e2 + " " + upcoming.f2} subValue={upcoming.d + " · " + upcoming.t + " · Grupa " + upcoming.g} accent="red" />
           </div>
+
           <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
-            <div className="text-xs tracking-[0.25em] text-stone-500 font-mono mb-4">SISTEM DE PUNCTAJ</div>
+            <div className="text-xs tracking-[0.25em] text-stone-500 font-mono mb-4">SISTEM DE PUNCTAJ · MECIURI</div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <ScoringTile pts={config.scoring.exact} label="SCOR EXACT" desc="2-1 → 2-1" color="from-amber-500 to-orange-500" />
               <ScoringTile pts={config.scoring.diff} label="DIFERENȚĂ" desc="2-1 → 3-2" color="from-emerald-500 to-teal-500" />
@@ -503,6 +627,22 @@
               <ScoringTile pts={config.scoring.wrong} label="GREȘIT" desc="rezultat invers" color="from-stone-700 to-stone-800" />
             </div>
           </div>
+
+          <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/10 backdrop-blur border border-purple-500/20 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">⭐</span>
+              <div className="text-xs tracking-[0.25em] text-purple-300 font-mono">ÎNTREBĂRI BONUS · până la 62 puncte extra</div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <BonusTile pts={BONUS_POINTS.champion} label="CÂȘTIGĂTORUL TURNEULUI" desc="Ghicești cine va lua Cupa" />
+              <BonusTile pts={BONUS_POINTS.finalist} label="FINALISTA ÎNVINSĂ" desc="Echipa care pierde finala" />
+              <BonusTile pts={BONUS_POINTS.topScorer} label="GOLGHETER" desc="Cel mai mare marcator al turneului" />
+              <BonusTile pts={BONUS_POINTS.surprise} label="ECHIPA SURPRIZĂ" desc="Semifinalistă neașteptată" />
+              <BonusTile pts={BONUS_POINTS.mostGoalsAgainst} label="GOLURI PRIMITE" desc="Echipa cu cele mai multe goluri primite în grupe" />
+            </div>
+            <div className="text-xs text-purple-300/70 mt-4 font-mono">Răspunsurile se completează până la deadline. Evaluare la finalul turneului.</div>
+          </div>
+
           {standings[0] && standings[0].played > 0 && (
             <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4"><div className="text-xs tracking-[0.25em] text-stone-500 font-mono">CLASAMENT TOP 5</div><button type="button" onClick={() => setView("leaderboard")} className="text-xs text-amber-400 hover:text-amber-300 font-mono tracking-widest">VEZI TOT →</button></div>
@@ -519,7 +659,7 @@
           )}
           {!isAdmin && <div className="text-center pt-4"><button type="button" onClick={() => setShowAdminLogin(true)} className="text-xs text-stone-600 hover:text-stone-400 font-mono tracking-widest">🔐 AUTENTIFICARE ADMIN</button></div>}
           {showRegister && <Modal onClose={() => setShowRegister(false)} title="ÎNSCRIERE NOUĂ"><RegisterForm players={players} showToast={showToast} onSubmit={async (name, password) => {
-            const newPlayer = { name, password, predictions: {} };
+            const newPlayer = { name, password, predictions: {}, bonus: {} };
             const ok = await savePlayer(newPlayer);
             if (ok) { setCurrentPlayer(newPlayer); setShowRegister(false); setView("predict"); showToast("Bun venit, " + name + "! 🎯"); }
           }} /></Modal>}
@@ -537,6 +677,18 @@
     }
 
     function ScoringTile(props) { return <div className={"bg-gradient-to-br " + props.color + " rounded-lg p-4 text-stone-950"}><div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{props.pts}</div><div className="text-[10px] tracking-[0.2em] font-bold mt-2">{props.label}</div><div className="text-[10px] mt-1 opacity-70 font-mono">{props.desc}</div></div>; }
+
+    function BonusTile(props) {
+      return (
+        <div className="bg-stone-900/80 border border-purple-500/30 rounded-lg p-3 flex items-center gap-3">
+          <div className="text-3xl font-black text-purple-300 leading-none shrink-0" style={{fontFamily:'"Bebas Neue", sans-serif'}}>+{props.pts}</div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold tracking-wide truncate">{props.label}</div>
+            <div className="text-[10px] text-stone-500 font-mono mt-0.5 truncate">{props.desc}</div>
+          </div>
+        </div>
+      );
+    }
 
     function RegisterForm(props) {
       const { players, onSubmit, showToast } = props;
@@ -631,6 +783,10 @@
             </div>
             {!isLocked && <div className="bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 min-w-[180px]"><div className="flex justify-between text-[10px] tracking-widest font-mono text-stone-500 mb-1"><span>PROGRES</span><span>{Math.round(completed/72*100)}%</span></div><div className="h-2 bg-stone-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{width: (completed/72*100) + "%"}}/></div></div>}
           </div>
+          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 flex items-center gap-3">
+            <span className="text-2xl">⭐</span>
+            <div className="flex-1 text-sm">Nu uita să completezi și <span className="font-bold text-purple-300">întrebările bonus</span> pentru până la 62 puncte extra!</div>
+          </div>
           <div className="space-y-2">
             <input type="search" placeholder="caută echipă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64 bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400" style={{fontSize:16}} />
             <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
@@ -675,8 +831,122 @@
       );
     }
 
+    function BonusView(props) {
+      const { player, isLocked, bonusResults, updatePlayer } = props;
+      const [topScorerMode, setTopScorerMode] = useState(() => {
+        const ts = player.bonus && player.bonus.topScorer;
+        if (!ts) return "list";
+        return TOP_SCORERS.includes(ts) ? "list" : "custom";
+      });
+      const bonus = player.bonus || {};
+
+      const updateBonus = (field, value) => {
+        if (isLocked) return;
+        updatePlayer({ ...player, bonus: { ...bonus, [field]: value } });
+      };
+
+      // La finalistă, exclud câștigătorul
+      const finalistOptions = bonus.champion ? TEAMS.filter((t) => t.name !== bonus.champion) : TEAMS;
+
+      const fieldStatus = (field) => {
+        if (!bonusResults[field]) return null;
+        if (field === "topScorer") {
+          const userVal = (bonus[field] || "").toLowerCase().trim();
+          const realVal = bonusResults[field].toLowerCase().trim();
+          return userVal === realVal ? "win" : "lose";
+        }
+        return bonus[field] === bonusResults[field] ? "win" : "lose";
+      };
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <div className="text-xs tracking-[0.25em] text-purple-400 font-mono">⭐ ÎNTREBĂRI BONUS · {player.name.toUpperCase()}</div>
+            <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>PARIAZĂ-ȚI <span className="text-purple-400">ȘANSELE</span></h2>
+            <p className="text-stone-400 mt-2 text-sm">{isLocked ? <span className="text-red-400">🔒 Răspunsurile sunt blocate.</span> : <>5 întrebări = până la <span className="font-bold text-purple-300">62 puncte bonus</span>. Salvare automată.</>}</p>
+          </div>
+
+          <BonusQuestion num={1} pts={BONUS_POINTS.champion} title="CÂȘTIGĂTORUL TURNEULUI" desc="Cine va lua trofeul Cupei Mondiale 2026?" status={fieldStatus("champion")} realAnswer={bonusResults.champion}>
+            <select value={bonus.champion || ""} onChange={(e) => updateBonus("champion", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+          </BonusQuestion>
+
+          <BonusQuestion num={2} pts={BONUS_POINTS.finalist} title="FINALISTA ÎNVINSĂ" desc="Cine va pierde finala (locul 2)?" status={fieldStatus("finalist")} realAnswer={bonusResults.finalist}>
+            <select value={bonus.finalist || ""} onChange={(e) => updateBonus("finalist", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {finalistOptions.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+            {!bonus.champion && !isLocked && <div className="text-[11px] text-amber-300/70 mt-2">💡 Alege întâi câștigătorul ca să excluzi auto această echipă</div>}
+          </BonusQuestion>
+
+          <BonusQuestion num={3} pts={BONUS_POINTS.topScorer} title="GOLGHETER TURNEU" desc="Cel mai bun marcator al turneului (gheata de aur)" status={fieldStatus("topScorer")} realAnswer={bonusResults.topScorer}>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setTopScorerMode("list")} disabled={isLocked} className={"flex-1 px-3 py-2 rounded-md text-xs font-bold tracking-widest transition " + (topScorerMode === "list" ? "bg-purple-500 text-white" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>DIN LISTĂ ({TOP_SCORERS.length} favoriți)</button>
+                <button type="button" onClick={() => setTopScorerMode("custom")} disabled={isLocked} className={"flex-1 px-3 py-2 rounded-md text-xs font-bold tracking-widest transition " + (topScorerMode === "custom" ? "bg-purple-500 text-white" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>ALT JUCĂTOR (text liber)</button>
+              </div>
+              {topScorerMode === "list" ? (
+                <select value={TOP_SCORERS.includes(bonus.topScorer || "") ? bonus.topScorer : ""} onChange={(e) => updateBonus("topScorer", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+                  <option value="">— alege jucător —</option>
+                  {TOP_SCORERS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              ) : (
+                <input value={!TOP_SCORERS.includes(bonus.topScorer || "") ? (bonus.topScorer || "") : ""} onChange={(e) => updateBonus("topScorer", e.target.value)} disabled={isLocked} placeholder="ex: Cristiano Ronaldo" style={inputStyleObj} />
+              )}
+            </div>
+          </BonusQuestion>
+
+          <BonusQuestion num={4} pts={BONUS_POINTS.surprise} title="ECHIPA SURPRIZĂ" desc="Echipa non-favorită care va ajunge în semifinale (NU una din top 8: Argentina, Brazilia, Franța, Anglia, Spania, Germania, Portugalia, Olanda)" status={fieldStatus("surprise")} realAnswer={bonusResults.surprise}>
+            <select value={bonus.surprise || ""} onChange={(e) => updateBonus("surprise", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {TEAMS.filter((t) => !FAVORITE_TEAMS.includes(t.name)).map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+          </BonusQuestion>
+
+          <BonusQuestion num={5} pts={BONUS_POINTS.mostGoalsAgainst} title="GOLURI PRIMITE ÎN GRUPE" desc="Echipa cu cele mai multe goluri primite în faza grupelor" status={fieldStatus("mostGoalsAgainst")} realAnswer={bonusResults.mostGoalsAgainst}>
+            <select value={bonus.mostGoalsAgainst || ""} onChange={(e) => updateBonus("mostGoalsAgainst", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+          </BonusQuestion>
+        </div>
+      );
+    }
+
+    function BonusQuestion(props) {
+      const { num, pts, title, desc, children, status, realAnswer } = props;
+      const statusBg = status === "win" ? "border-emerald-500/40 bg-emerald-500/5" : status === "lose" ? "border-red-500/30 bg-red-500/5" : "border-stone-800";
+      return (
+        <div className={"bg-stone-900/60 backdrop-blur border rounded-xl p-5 " + statusBg}>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-black text-purple-300" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{num}</div>
+              <div>
+                <h3 className="font-black tracking-widest text-base" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.1em"}}>{title}</h3>
+                <p className="text-xs text-stone-400 mt-0.5">{desc}</p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-2xl font-black text-purple-300 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>+{pts}</div>
+              <div className="text-[9px] text-stone-500 font-mono tracking-widest mt-0.5">PCT</div>
+            </div>
+          </div>
+          {children}
+          {realAnswer && (
+            <div className="mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs">
+              <div><span className="text-stone-500 font-mono tracking-widest text-[10px] mr-2">RĂSPUNS CORECT:</span><span className="font-bold text-emerald-400">{realAnswer}</span></div>
+              {status === "win" && <span className="bg-emerald-500 text-stone-950 px-2 py-1 rounded font-black" style={{fontFamily:'"Bebas Neue", sans-serif'}}>+{pts} PCT ✓</span>}
+              {status === "lose" && <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded font-bold">0 PCT ✗</span>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     function LeaderboardView(props) {
-      const { standings, players, results, scoring } = props;
+      const { standings, players, results, bonusResults, scoring } = props;
       const [showDetail, setShowDetail] = useState(null);
       const matchesPlayed = MATCHES.filter((m) => results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
       return (
@@ -688,28 +958,30 @@
           </div>
           {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă.</div>
           : <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,100px] gap-2 px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-[10px] tracking-widest text-stone-500 font-mono">
-                <div>LOC</div><div>JUCĂTOR</div><div className="text-center">EXACTE</div><div className="text-center">DIFER.</div><div className="text-center">1X2</div><div className="text-center">GREȘ.</div><div className="text-right">TOTAL</div>
+              <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,80px,100px] gap-2 px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-[10px] tracking-widest text-stone-500 font-mono">
+                <div>LOC</div><div>JUCĂTOR</div><div className="text-center">EXACTE</div><div className="text-center">DIFER.</div><div className="text-center">1X2</div><div className="text-center">GREȘ.</div><div className="text-center text-purple-400">BONUS</div><div className="text-right">TOTAL</div>
               </div>
               {standings.map((s, i) => {
                 const player = players.find((p) => p.name === s.name);
+                const isLast = i === standings.length - 1 && standings.length > 1;
                 return (
                   <div key={s.name}>
-                    <button type="button" onClick={() => setShowDetail(showDetail === s.name ? null : s.name)} className={"w-full text-left px-4 py-4 border-b border-stone-800 last:border-0 hover:bg-stone-800/30 transition " + (i === 0 && s.played > 0 ? "bg-amber-400/5" : "")}>
-                      <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,100px] gap-2 items-center">
-                        <div><div className={"w-9 h-9 flex items-center justify-center rounded-md font-black " + (i === 0 ? "bg-amber-400 text-stone-950" : i === 1 ? "bg-stone-300 text-stone-950" : i === 2 ? "bg-orange-700 text-white" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div></div>
-                        <div className="flex items-center gap-2 min-w-0"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span className="text-lg">👑</span>}</div>
+                    <button type="button" onClick={() => setShowDetail(showDetail === s.name ? null : s.name)} className={"w-full text-left px-4 py-4 border-b border-stone-800 last:border-0 hover:bg-stone-800/30 transition " + (i === 0 && s.played > 0 ? "bg-amber-400/5" : "") + (isLast && s.played > 0 ? " bg-red-500/5" : "")}>
+                      <div className="hidden sm:grid grid-cols-[60px,1fr,80px,80px,80px,80px,80px,100px] gap-2 items-center">
+                        <div><div className={"w-9 h-9 flex items-center justify-center rounded-md font-black " + (i === 0 ? "bg-amber-400 text-stone-950" : i === 1 ? "bg-stone-300 text-stone-950" : isLast ? "bg-red-500/20 text-red-300" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div></div>
+                        <div className="flex items-center gap-2 min-w-0"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span className="text-lg">👑</span>}{isLast && s.played > 0 && <span className="text-lg" title="Wooden Spoon - locul ultimul">🥄</span>}</div>
                         <div className="text-center"><span className="text-amber-400 font-bold">{s.exact}</span></div>
                         <div className="text-center"><span className="text-emerald-400 font-bold">{s.diff}</span></div>
                         <div className="text-center"><span className="text-sky-400 font-bold">{s.outcome}</span></div>
                         <div className="text-center"><span className="text-stone-500 font-bold">{s.wrong}</span></div>
+                        <div className="text-center"><span className="text-purple-300 font-bold">{s.bonusTotal > 0 ? "+" + s.bonusTotal : "—"}</span></div>
                         <div className="text-right flex items-center justify-end gap-2"><div className="text-3xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div><span className={"text-stone-500 transition inline-block " + (showDetail === s.name ? "rotate-180" : "")}>▾</span></div>
                       </div>
                       <div className="sm:hidden flex items-center gap-3">
-                        <div className={"w-10 h-10 flex items-center justify-center rounded-md font-black shrink-0 " + (i === 0 ? "bg-amber-400 text-stone-950" : i === 1 ? "bg-stone-300 text-stone-950" : i === 2 ? "bg-orange-700 text-white" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div>
+                        <div className={"w-10 h-10 flex items-center justify-center rounded-md font-black shrink-0 " + (i === 0 ? "bg-amber-400 text-stone-950" : i === 1 ? "bg-stone-300 text-stone-950" : isLast ? "bg-red-500/20 text-red-300" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>{i + 1}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span>👑</span>}</div>
-                          <div className="text-[10px] text-stone-500 font-mono tracking-widest mt-0.5"><span className="text-amber-400">{s.exact}E</span><span className="mx-1.5">·</span><span className="text-emerald-400">{s.diff}D</span><span className="mx-1.5">·</span><span className="text-sky-400">{s.outcome}R</span></div>
+                          <div className="flex items-center gap-1.5"><div className="font-bold truncate">{s.name}</div>{i === 0 && s.played > 0 && <span>👑</span>}{isLast && s.played > 0 && <span>🥄</span>}</div>
+                          <div className="text-[10px] text-stone-500 font-mono tracking-widest mt-0.5"><span className="text-amber-400">{s.exact}E</span><span className="mx-1.5">·</span><span className="text-emerald-400">{s.diff}D</span><span className="mx-1.5">·</span><span className="text-sky-400">{s.outcome}R</span>{s.bonusTotal > 0 && <><span className="mx-1.5">·</span><span className="text-purple-300">+{s.bonusTotal}B</span></>}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right"><div className="text-3xl font-black text-amber-400 leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{s.total}</div><div className="text-[9px] text-stone-500 font-mono tracking-widest mt-0.5">PCT</div></div>
@@ -717,7 +989,7 @@
                         </div>
                       </div>
                     </button>
-                    {showDetail === s.name && player && <PlayerDetail player={player} results={results} scoring={scoring} />}
+                    {showDetail === s.name && player && <PlayerDetail player={player} results={results} bonusResults={bonusResults} scoring={scoring} standing={s} />}
                   </div>
                 );
               })}
@@ -727,29 +999,61 @@
     }
 
     function PlayerDetail(props) {
-      const { player, results, scoring } = props;
+      const { player, results, bonusResults, scoring, standing } = props;
+      const bonus = player.bonus || {};
+      const hasBonusAnswered = bonus.champion || bonus.finalist || bonus.topScorer || bonus.surprise || bonus.mostGoalsAgainst;
       return (
-        <div className="bg-stone-950/50 border-b border-stone-800 px-4 py-4">
-          <div className="text-xs tracking-widest font-mono text-stone-500 mb-3">PRONOSTICURILE LUI {player.name.toUpperCase()}</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {MATCHES.map((m) => {
-              const pred = player.predictions ? player.predictions[m.n] : null;
-              const real = results[m.n];
-              const pts = calcPoints(pred, real, scoring);
-              const c = groupColors[m.g];
-              let badge = "";
-              if (pts === scoring.exact) badge = "bg-amber-400 text-stone-950";
-              else if (pts === scoring.diff) badge = "bg-emerald-500 text-stone-950";
-              else if (pts === scoring.outcome) badge = "bg-sky-500 text-white";
-              else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
-              return (
-                <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + "40"}}>
-                  <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono text-stone-500">M{m.n}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span></div>
-                  <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
-                </div>
-              );
-            })}
+        <div className="bg-stone-950/50 border-b border-stone-800 px-4 py-4 space-y-4">
+          {hasBonusAnswered && (
+            <div>
+              <div className="text-xs tracking-widest font-mono text-purple-400 mb-2">⭐ RĂSPUNSURI BONUS · {standing.bonusTotal} PCT</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {bonus.champion && <BonusDetailRow label="🏆 Câștigător" answer={bonus.champion} pts={standing.bonusBreakdown.champion} maxPts={BONUS_POINTS.champion} realAnswer={bonusResults.champion} />}
+                {bonus.finalist && <BonusDetailRow label="🥈 Finalistă învinsă" answer={bonus.finalist} pts={standing.bonusBreakdown.finalist} maxPts={BONUS_POINTS.finalist} realAnswer={bonusResults.finalist} />}
+                {bonus.topScorer && <BonusDetailRow label="⚽ Golgheter" answer={bonus.topScorer} pts={standing.bonusBreakdown.topScorer} maxPts={BONUS_POINTS.topScorer} realAnswer={bonusResults.topScorer} />}
+                {bonus.surprise && <BonusDetailRow label="✨ Echipa surpriză" answer={bonus.surprise} pts={standing.bonusBreakdown.surprise} maxPts={BONUS_POINTS.surprise} realAnswer={bonusResults.surprise} />}
+                {bonus.mostGoalsAgainst && <BonusDetailRow label="🥅 Cele mai multe goluri primite" answer={bonus.mostGoalsAgainst} pts={standing.bonusBreakdown.mostGoalsAgainst} maxPts={BONUS_POINTS.mostGoalsAgainst} realAnswer={bonusResults.mostGoalsAgainst} />}
+              </div>
+            </div>
+          )}
+          <div>
+            <div className="text-xs tracking-widest font-mono text-stone-500 mb-2">PRONOSTICURI MECIURI · {standing.matchTotal} PCT</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {MATCHES.map((m) => {
+                const pred = player.predictions ? player.predictions[m.n] : null;
+                const real = results[m.n];
+                const pts = calcPoints(pred, real, scoring);
+                const c = groupColors[m.g];
+                let badge = "";
+                if (pts === scoring.exact) badge = "bg-amber-400 text-stone-950";
+                else if (pts === scoring.diff) badge = "bg-emerald-500 text-stone-950";
+                else if (pts === scoring.outcome) badge = "bg-sky-500 text-white";
+                else if (pts === scoring.wrong) badge = "bg-stone-700 text-stone-400";
+                return (
+                  <div key={m.n} className="bg-stone-900 border rounded-md px-2.5 py-1.5 text-xs flex items-center justify-between gap-2" style={{borderColor: c.border + "40"}}>
+                    <div className="flex items-center gap-2 min-w-0"><span className="text-[9px] font-mono text-stone-500">M{m.n}</span><span className="truncate text-stone-300 text-[11px]">{m.f1}{m.e1.slice(0,3)} – {m.e2.slice(0,3)}{m.f2}</span></div>
+                    <div className="flex items-center gap-1.5 shrink-0"><span className="font-mono font-bold text-stone-200">{pred && pred.g1 != null ? pred.g1 : "–"}-{pred && pred.g2 != null ? pred.g2 : "–"}</span>{real && real.g1 != null && real.g2 != null && <span className="font-mono text-emerald-400">[{real.g1}-{real.g2}]</span>}{pts != null && <span className={badge + " px-1.5 rounded text-[10px] font-black"}>+{pts}</span>}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        </div>
+      );
+    }
+
+    function BonusDetailRow(props) {
+      const { label, answer, pts, maxPts, realAnswer } = props;
+      const won = pts > 0;
+      return (
+        <div className={"bg-stone-900 border rounded-md px-3 py-2 text-xs " + (won ? "border-emerald-500/40" : realAnswer ? "border-red-500/30" : "border-purple-500/20")}>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="text-stone-400 font-mono text-[10px]">{label}</span>
+            {realAnswer && (won ? <span className="bg-emerald-500 text-stone-950 px-1.5 rounded text-[10px] font-black">+{pts}</span> : <span className="bg-red-500/20 text-red-400 px-1.5 rounded text-[10px] font-bold">0/{maxPts}</span>)}
+            {!realAnswer && <span className="text-purple-300 font-bold text-[10px]">{maxPts} pct</span>}
+          </div>
+          <div className="font-bold text-stone-200 text-[11px] truncate">{answer}</div>
+          {realAnswer && realAnswer !== answer && <div className="text-[10px] text-emerald-400 mt-0.5 truncate">→ corect: {realAnswer}</div>}
         </div>
       );
     }
@@ -763,9 +1067,10 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
           </div>
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["results", "🥅 REZULTATE"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
+            {[["results", "🥅 REZULTATE"], ["bonus", "⭐ BONUS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
           </div>
           {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} />}
+          {tab === "bonus" && <AdminBonus bonusResults={props.bonusResults} saveBonusResults={props.saveBonusResults} showToast={props.showToast} />}
           {tab === "settings" && <AdminSettings config={props.config} saveConfig={props.saveConfig} showToast={props.showToast} />}
           {tab === "players" && <AdminPlayers players={props.players} deletePlayer={props.deletePlayer} askConfirm={props.askConfirm} showToast={props.showToast} />}
         </div>
@@ -824,6 +1129,83 @@
       );
     }
 
+    function AdminBonus(props) {
+      const { bonusResults, saveBonusResults, showToast } = props;
+      const [pending, setPending] = useState(bonusResults);
+      const [dirty, setDirty] = useState(false);
+      useEffect(() => { setPending(bonusResults); setDirty(false); }, [bonusResults]);
+      const update = (field, value) => { setPending((p) => ({ ...p, [field]: value })); setDirty(true); };
+      const save = async () => {
+        const clean = {};
+        for (const k of ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"]) {
+          if (pending[k]) clean[k] = pending[k];
+        }
+        const ok = await saveBonusResults(clean);
+        if (ok) { setDirty(false); showToast("Rezultate bonus salvate."); }
+      };
+      return (
+        <div className="space-y-4">
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+            <div className="font-bold text-purple-300">⭐ Răspunsuri întrebări bonus</div>
+            <div className="text-xs text-stone-400 mt-1">Completează pe parcursul/la finalul turneului. Punctele se acordă automat.</div>
+          </div>
+
+          <div className="space-y-3">
+            <AdminBonusField label="🏆 Câștigătorul turneului" pts={BONUS_POINTS.champion}>
+              <select value={pending.champion || ""} onChange={(e) => update("champion", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+
+            <AdminBonusField label="🥈 Finalista învinsă" pts={BONUS_POINTS.finalist}>
+              <select value={pending.finalist || ""} onChange={(e) => update("finalist", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+
+            <AdminBonusField label="⚽ Golgheter turneu" pts={BONUS_POINTS.topScorer}>
+              <input value={pending.topScorer || ""} onChange={(e) => update("topScorer", e.target.value)} placeholder="ex: Kylian Mbappé (Franța)" style={inputStyleObj} />
+              <div className="text-[10px] text-stone-500 mt-1.5 font-mono">Match case-insensitive. Folosește exact formatul din listă pentru a match-ui cu jucătorii.</div>
+            </AdminBonusField>
+
+            <AdminBonusField label="✨ Echipa surpriză" pts={BONUS_POINTS.surprise}>
+              <select value={pending.surprise || ""} onChange={(e) => update("surprise", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.filter((t) => !FAVORITE_TEAMS.includes(t.name)).map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+
+            <AdminBonusField label="🥅 Goluri primite în grupe" pts={BONUS_POINTS.mostGoalsAgainst}>
+              <select value={pending.mostGoalsAgainst || ""} onChange={(e) => update("mostGoalsAgainst", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+          </div>
+
+          {dirty && (
+            <div className="sticky bottom-4 flex justify-end">
+              <button type="button" onClick={save} className="bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition flex items-center gap-2 shadow-2xl shadow-amber-500/30" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.2em"}}>💾 SALVEAZĂ BONUS</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AdminBonusField(props) {
+      return (
+        <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold text-sm">{props.label}</div>
+            <div className="text-xs text-purple-300 font-bold">+{props.pts} pct</div>
+          </div>
+          {props.children}
+        </div>
+      );
+    }
+
     function AdminSettings(props) {
       const { config, saveConfig, showToast } = props;
       const [scoring, setScoring] = useState(config.scoring);
@@ -875,9 +1257,11 @@
           {players.length === 0 ? <div className="p-8 text-center text-stone-500">Niciun jucător încă.</div>
           : players.map((p) => {
             const completed = MATCHES.filter((m) => p.predictions && p.predictions[m.n] && p.predictions[m.n].g1 !== "" && p.predictions[m.n].g2 !== "" && p.predictions[m.n].g1 != null && p.predictions[m.n].g2 != null).length;
+            const bonusFields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"];
+            const bonusFilled = p.bonus ? bonusFields.filter((f) => p.bonus[f]).length : 0;
             return (
               <div key={p.name} className="px-4 py-3 border-b border-stone-800 last:border-0 flex items-center justify-between gap-4">
-                <div><div className="font-bold">{p.name}</div><div className="text-xs text-stone-500 font-mono">{completed}/72 pronosticuri</div></div>
+                <div><div className="font-bold">{p.name}</div><div className="text-xs text-stone-500 font-mono">{completed}/72 meciuri · {bonusFilled}/5 bonus</div></div>
                 <button type="button" onClick={() => remove(p.name)} className="text-red-400 hover:text-red-300 p-2 rounded hover:bg-red-500/10" title="Șterge">🗑</button>
               </div>
             );
