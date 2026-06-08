@@ -662,6 +662,7 @@
             {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} knockoutMatches={knockoutMatches} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "bonus" && currentPlayer && <BonusView player={currentPlayer} isLocked={isLocked} bonusResults={bonusResults} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
+            {view === "analytics" && <AnalyticsView players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} standings={standings} />}
             {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} knockouts={knockouts} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} saveKnockoutPhase={saveKnockoutPhase} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
           </main>
           <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
@@ -692,6 +693,7 @@
                 {currentPlayer && <NavBtn active={view==="predict"} onClick={() => setView("predict")}>PRONOSTICURI</NavBtn>}
                 {currentPlayer && <NavBtn active={view==="bonus"} onClick={() => setView("bonus")}>BONUS</NavBtn>}
                 <NavBtn active={view==="leaderboard"} onClick={() => setView("leaderboard")}>CLASAMENT</NavBtn>
+                <NavBtn active={view==="analytics"} onClick={() => setView("analytics")}>📊 ANALIZE</NavBtn>
                 {isAdmin && <NavBtn active={view==="admin"} onClick={() => setView("admin")}>ADMIN</NavBtn>}
               </nav>
               <div className="flex items-center gap-2">
@@ -705,6 +707,7 @@
               {currentPlayer && <NavBtn active={view==="predict"} onClick={() => setView("predict")}>PRONOSTICURI</NavBtn>}
               {currentPlayer && <NavBtn active={view==="bonus"} onClick={() => setView("bonus")}>BONUS</NavBtn>}
               <NavBtn active={view==="leaderboard"} onClick={() => setView("leaderboard")}>CLASAMENT</NavBtn>
+              <NavBtn active={view==="analytics"} onClick={() => setView("analytics")}>📊 ANALIZE</NavBtn>
               {isAdmin && <NavBtn active={view==="admin"} onClick={() => setView("admin")}>ADMIN</NavBtn>}
             </div>
           </div>
@@ -797,30 +800,30 @@
             <div className="text-3xl">💰</div>
             <div>
               <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PREMII CONCURS</div>
-              <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>FOND TOTAL · 1000 RON</div>
+              <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>FOND TOTAL · 300 RON</div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-gradient-to-br from-amber-400 to-yellow-500 rounded-lg p-4 text-stone-950 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥇</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>700</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>180</div>
               <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 1</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">câștigătorul concursului</div>
             </div>
             <div className="bg-gradient-to-br from-stone-300 to-stone-400 rounded-lg p-4 text-stone-950 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥈</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>250</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>90</div>
               <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 2</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">vicecampion</div>
             </div>
             <div className="bg-gradient-to-br from-stone-700 to-stone-800 rounded-lg p-4 text-stone-200 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-30">🥄</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>50</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>30</div>
               <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL ULTIMUL</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">"wooden spoon" 🤣</div>
             </div>
           </div>
-          <div className="text-[10px] text-stone-500 mt-4 font-mono">Miza: 100 RON / persoană · 9 jucători · Premiu garantat pentru ultimul ca să nu plece nimeni cu mâna goală :)</div>
+          <div className="text-[10px] text-stone-500 mt-4 font-mono">Miza: 50 RON / persoană · 6 jucători · Premiu garantat pentru ultimul ca să nu plece nimeni cu mâna goală :)</div>
         </div>
       );
     }
@@ -1426,6 +1429,738 @@
           </div>
           <div className="font-bold text-stone-200 text-[11px] truncate">{answer}</div>
           {realAnswer && realAnswer !== answer && <div className="text-[10px] text-emerald-400 mt-0.5 truncate">→ corect: {realAnswer}</div>}
+        </div>
+      );
+    }
+
+    // ========== ANALYTICS ==========
+    function AnalyticsView(props) {
+      const { players, results, bonusResults, scoring, knockoutMatches, allKnockoutMatches, standings } = props;
+      const [tab, setTab] = useState("matches");
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <div className="text-xs tracking-[0.25em] text-cyan-400 font-mono">📊 ANALIZE & STATISTICI</div>
+            <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CINE-A <span className="text-cyan-400">PARIAT CE</span></h2>
+            <p className="text-stone-400 text-sm mt-2">Vezi consensul și outlierii din grupul vostru. {players.length} jucători în joc.</p>
+          </div>
+
+          <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
+            {[["matches", "⚽ MECIURI"], ["bonus", "⭐ ÎNTREBĂRI BONUS"], ["facts", "🎲 FUN FACTS"], ["battle", "⚔️ BATTLE CARDS"]].map((arr) => (
+              <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-cyan-400 text-cyan-300" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>
+            ))}
+          </div>
+
+          {tab === "matches" && <AnalyticsMatches players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
+          {tab === "bonus" && <AnalyticsBonus players={players} bonusResults={bonusResults} />}
+          {tab === "facts" && <AnalyticsFunFacts players={players} results={results} bonusResults={bonusResults} scoring={scoring} allKnockoutMatches={allKnockoutMatches} standings={standings} />}
+          {tab === "battle" && <AnalyticsBattle players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
+        </div>
+      );
+    }
+
+    // ========== HELPER FUNCTIONS ==========
+
+    // Returnează distribuția pronosticurilor pentru un meci
+    function getMatchPredictionStats(matchN, players) {
+      const predictions = [];
+      for (const p of players) {
+        const pred = p.predictions ? p.predictions[matchN] : null;
+        if (pred && pred.g1 !== "" && pred.g2 !== "" && pred.g1 != null && pred.g2 != null) {
+          predictions.push({ player: p.name, g1: +pred.g1, g2: +pred.g2 });
+        }
+      }
+      // Grupez pe scoruri identice
+      const scoreGroups = {};
+      for (const p of predictions) {
+        const key = p.g1 + "-" + p.g2;
+        if (!scoreGroups[key]) scoreGroups[key] = { score: key, g1: p.g1, g2: p.g2, players: [] };
+        scoreGroups[key].players.push(p.player);
+      }
+      const sortedGroups = Object.values(scoreGroups).sort((a, b) => b.players.length - a.players.length);
+
+      // Statistici suplimentare
+      let team1Wins = 0, team2Wins = 0, draws = 0;
+      let totalG1 = 0, totalG2 = 0;
+      for (const p of predictions) {
+        if (p.g1 > p.g2) team1Wins++;
+        else if (p.g2 > p.g1) team2Wins++;
+        else draws++;
+        totalG1 += p.g1; totalG2 += p.g2;
+      }
+
+      return {
+        total: predictions.length,
+        groups: sortedGroups,
+        team1Wins, team2Wins, draws,
+        avgG1: predictions.length ? (totalG1 / predictions.length).toFixed(1) : "—",
+        avgG2: predictions.length ? (totalG2 / predictions.length).toFixed(1) : "—"
+      };
+    }
+
+    // Returnează distribuția răspunsurilor bonus pentru un câmp
+    function getBonusDistribution(field, players) {
+      const groups = {};
+      for (const p of players) {
+        const ans = p.bonus && p.bonus[field];
+        if (!ans) continue;
+        const key = ans.trim();
+        if (!groups[key]) groups[key] = { answer: key, players: [] };
+        groups[key].players.push(p.name);
+      }
+      return Object.values(groups).sort((a, b) => b.players.length - a.players.length);
+    }
+
+    // ========== ANALYTICS COMPONENTS ==========
+
+    function AnalyticsMatches(props) {
+      const { players, results, scoring, allKnockoutMatches } = props;
+      const [filter, setFilter] = useState("all");
+      const [search, setSearch] = useState("");
+
+      // Toate meciurile (grupe + eliminatorii ready)
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+
+      const filtered = allMatches.filter((m) => {
+        if (filter === "all") return true;
+        if (PHASES_ORDER.includes(filter)) return m.isKnockout && m.g === filter;
+        return !m.isKnockout && m.g === filter;
+      }).filter((m) => {
+        if (!search) return true;
+        return (m.e1 + " " + m.e2).toLowerCase().includes(search.toLowerCase());
+      });
+
+      const hasKnockouts = (allKnockoutMatches || []).some((m) => m.isReady);
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+            <div className="font-bold text-cyan-300">📊 Distribuția pronosticurilor pe fiecare meci</div>
+            <div className="text-xs text-stone-400 mt-1">Vezi cele mai populare scoruri și cine a prezis ce. Click pe scoruri ca să vezi numele jucătorilor.</div>
+          </div>
+
+          <div className="space-y-2">
+            <input type="search" placeholder="caută echipă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64 bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-sm outline-none focus:border-cyan-400" style={{fontSize:16}} />
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 no-scrollbar">
+              <button type="button" onClick={() => setFilter("all")} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter==="all" ? "bg-cyan-400 text-stone-950" : "bg-stone-800 text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>TOATE</button>
+              {["A","B","C","D","E","F","G","H","I","J","K","L"].map((g) => <button type="button" key={g} onClick={() => setFilter(g)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (filter===g ? "text-stone-950" : "text-stone-400")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: filter===g ? groupColors[g].border : "transparent", border: "1px solid " + groupColors[g].border}}>GR. {g}</button>)}
+              {hasKnockouts && PHASES_ORDER.map((phaseKey) => {
+                const phase = KNOCKOUT_PHASES[phaseKey];
+                const phaseHasMatches = (allKnockoutMatches || []).some((m) => m.isReady && m.g === phaseKey);
+                if (!phaseHasMatches) return null;
+                const isActive = filter === phaseKey;
+                return (
+                  <button type="button" key={phaseKey} onClick={() => setFilter(phaseKey)} className={"px-3 py-1.5 rounded-md text-xs font-bold tracking-widest whitespace-nowrap shrink-0 " + (isActive ? "text-stone-950" : "")} style={{fontFamily:'"Bebas Neue", sans-serif', backgroundColor: isActive ? phase.color.border : "transparent", border: "1px solid " + phase.color.border, color: isActive ? "#0c0a09" : phase.color.text}}>{phase.icon} {phase.shortLabel}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filtered.map((m) => <MatchAnalyticsCard key={m.n} match={m} players={players} results={results} scoring={scoring} />)}
+          </div>
+          {filtered.length === 0 && <div className="text-center py-12 text-stone-500">Niciun meci găsit.</div>}
+        </div>
+      );
+    }
+
+    function MatchAnalyticsCard(props) {
+      const { match: m, players, results, scoring } = props;
+      const c = groupColors[m.isKnockout ? m.g : m.g];
+      const stats = getMatchPredictionStats(m.n, players);
+      const real = results[m.n];
+      const hasResult = real && real.g1 !== "" && real.g2 !== "" && real.g1 != null && real.g2 != null;
+      const labelText = m.isKnockout ? (m.phaseLabel + " · M" + m.n) : ("GR. " + m.g + " · M" + m.n);
+
+      // Procent pentru tendință 1X2
+      const total = stats.total || 1;
+      const pct1 = Math.round(stats.team1Wins / total * 100);
+      const pctX = Math.round(stats.draws / total * 100);
+      const pct2 = Math.round(stats.team2Wins / total * 100);
+
+      return (
+        <div className="rounded-xl border bg-stone-900/60 backdrop-blur p-4" style={{borderColor: c.border + "60"}}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text, border: "1px solid " + c.border + "40"}}>{labelText}</span>
+            <div className="text-[10px] text-stone-400 font-mono tracking-wider">{m.d} · {m.t}</div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mb-3 text-center">
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl">{m.f1}</div>
+              <div className="text-xs font-bold truncate">{m.e1}</div>
+            </div>
+            <div className="text-stone-500 text-xs font-mono">vs</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl">{m.f2}</div>
+              <div className="text-xs font-bold truncate">{m.e2}</div>
+            </div>
+          </div>
+
+          {hasResult && (
+            <div className="mb-3 pb-3 border-b border-stone-800 text-center">
+              <div className="text-[10px] text-stone-500 font-mono tracking-widest">REZULTAT REAL</div>
+              <div className="font-black text-emerald-400 text-xl" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{real.g1} – {real.g2}</div>
+            </div>
+          )}
+
+          {stats.total === 0 ? (
+            <div className="text-center py-4 text-xs text-stone-500 italic">Niciun pronostic.</div>
+          ) : (
+            <>
+              {/* Distribuție 1/X/2 */}
+              <div className="mb-3">
+                <div className="text-[10px] text-stone-500 font-mono tracking-widest mb-1.5">TENDINȚĂ 1/X/2</div>
+                <div className="flex h-6 rounded-md overflow-hidden text-[10px] font-bold">
+                  {pct1 > 0 && <div className="bg-emerald-500/70 text-stone-950 flex items-center justify-center" style={{width: pct1 + "%"}}>{pct1 > 15 ? pct1 + "% 1" : "1"}</div>}
+                  {pctX > 0 && <div className="bg-stone-500 text-stone-950 flex items-center justify-center" style={{width: pctX + "%"}}>{pctX > 15 ? pctX + "% X" : "X"}</div>}
+                  {pct2 > 0 && <div className="bg-rose-500/70 text-stone-950 flex items-center justify-center" style={{width: pct2 + "%"}}>{pct2 > 15 ? pct2 + "% 2" : "2"}</div>}
+                </div>
+                <div className="flex justify-between text-[10px] text-stone-500 font-mono mt-1">
+                  <span>{stats.team1Wins} prezic {m.e1}</span>
+                  <span>{stats.draws} egal</span>
+                  <span>{stats.team2Wins} prezic {m.e2}</span>
+                </div>
+              </div>
+
+              {/* Scoruri cele mai populare */}
+              <div className="mb-3">
+                <div className="text-[10px] text-stone-500 font-mono tracking-widest mb-1.5">CELE MAI POPULARE SCORURI</div>
+                <div className="space-y-1.5">
+                  {stats.groups.slice(0, 4).map((g) => {
+                    const widthPct = Math.round(g.players.length / stats.total * 100);
+                    const isCorrectExact = hasResult && +real.g1 === g.g1 && +real.g2 === g.g2;
+                    return (
+                      <div key={g.score} className="flex items-center gap-2">
+                        <span className={"font-black text-sm w-12 shrink-0 " + (isCorrectExact ? "text-amber-400" : "text-stone-200")} style={{fontFamily:'"Bebas Neue", sans-serif'}}>{g.score}</span>
+                        <div className="flex-1 h-5 bg-stone-800 rounded overflow-hidden relative">
+                          <div className={"h-full transition-all " + (isCorrectExact ? "bg-amber-400" : "bg-cyan-500/60")} style={{width: widthPct + "%"}}></div>
+                          <div className="absolute inset-0 flex items-center px-2 text-[10px] font-bold text-stone-100 font-mono">{g.players.length}/{stats.total}</div>
+                        </div>
+                        <div className="text-[10px] text-stone-400 w-32 shrink-0 truncate" title={g.players.join(", ")}>{g.players.join(", ")}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Medie goluri */}
+              <div className="text-[10px] text-stone-500 font-mono tracking-wider pt-2 border-t border-stone-800">
+                MEDIE GOLURI PREZISE: <span className="text-cyan-300 font-bold">{stats.avgG1} – {stats.avgG2}</span> · {stats.total}/{players.length} jucători
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    function AnalyticsBonus(props) {
+      const { players, bonusResults } = props;
+
+      const questions = [
+        { field: "champion", icon: "🏆", title: "CÂȘTIGĂTOR TURNEU", pts: BONUS_POINTS.champion, desc: "Cine ia trofeul?" },
+        { field: "finalist", icon: "🥈", title: "FINALISTĂ ÎNVINSĂ", pts: BONUS_POINTS.finalist, desc: "Cine pierde finala?" },
+        { field: "topScorer", icon: "⚽", title: "GOLGHETER", pts: BONUS_POINTS.topScorer, desc: "Cel mai bun marcator" },
+        { field: "surprise", icon: "✨", title: "ECHIPA SURPRIZĂ", pts: BONUS_POINTS.surprise, desc: "Semifinalistă non-favorită" },
+        { field: "mostGoalsAgainst", icon: "🥅", title: "GOLURI PRIMITE", pts: BONUS_POINTS.mostGoalsAgainst, desc: "Cele mai multe în grupe" }
+      ];
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+            <div className="font-bold text-purple-300">⭐ Răspunsurile tuturor la întrebările bonus</div>
+            <div className="text-xs text-stone-400 mt-1">Vezi consensul și outlierii. Cine a pariat pe favoriți și cine a riscat?</div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {questions.map((q) => {
+              const groups = getBonusDistribution(q.field, players);
+              const totalAnswered = groups.reduce((sum, g) => sum + g.players.length, 0);
+              const realAnswer = bonusResults[q.field];
+              return (
+                <div key={q.field} className="bg-stone-900/60 border border-purple-500/30 rounded-xl p-5">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-3xl">{q.icon}</div>
+                      <div>
+                        <h3 className="font-black tracking-widest" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.1em", fontSize: 16}}>{q.title}</h3>
+                        <p className="text-xs text-stone-400">{q.desc} · +{q.pts} pct</p>
+                      </div>
+                    </div>
+                    {realAnswer && (
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-stone-500 font-mono tracking-widest">RĂSPUNS CORECT</div>
+                        <div className="text-emerald-400 font-bold text-sm">{realAnswer}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {groups.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-stone-500 italic">Nimeni nu a răspuns încă.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {groups.map((g) => {
+                        const widthPct = Math.round(g.players.length / players.length * 100);
+                        const isCorrect = realAnswer && (g.answer.toLowerCase().trim() === realAnswer.toLowerCase().trim());
+                        return (
+                          <div key={g.answer} className="space-y-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <span className={"font-bold text-sm " + (isCorrect ? "text-emerald-400" : "text-stone-200")}>{g.answer}</span>
+                                {isCorrect && <span className="ml-2 bg-emerald-500 text-stone-950 px-1.5 py-0.5 rounded text-[10px] font-black">CORECT ✓</span>}
+                              </div>
+                              <span className="text-purple-300 font-bold text-sm shrink-0">{g.players.length}/{players.length}</span>
+                            </div>
+                            <div className="h-2 bg-stone-800 rounded-full overflow-hidden">
+                              <div className={"h-full transition-all " + (isCorrect ? "bg-emerald-500" : "bg-purple-500/60")} style={{width: widthPct + "%"}}></div>
+                            </div>
+                            <div className="text-[10px] text-stone-500 font-mono">
+                              {g.players.join(" · ")}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    function AnalyticsFunFacts(props) {
+      const { players, results, bonusResults, scoring, allKnockoutMatches, standings } = props;
+
+      // Calculez statistici
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+
+      // Cel mai prezis scor (în general)
+      const scoreCount = {};
+      for (const p of players) {
+        if (!p.predictions) continue;
+        for (const matchN in p.predictions) {
+          const pred = p.predictions[matchN];
+          if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+            const key = pred.g1 + "-" + pred.g2;
+            scoreCount[key] = (scoreCount[key] || 0) + 1;
+          }
+        }
+      }
+      const topScores = Object.entries(scoreCount).map(([s, c]) => ({score: s, count: c})).sort((a, b) => b.count - a.count).slice(0, 5);
+
+      // Total goluri prezise per jucător
+      const playerGoals = players.map((p) => {
+        let total = 0, matches = 0;
+        if (p.predictions) {
+          for (const matchN in p.predictions) {
+            const pred = p.predictions[matchN];
+            if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+              total += +pred.g1 + +pred.g2;
+              matches++;
+            }
+          }
+        }
+        return { name: p.name, total, matches, avg: matches ? (total / matches).toFixed(2) : "0.00" };
+      }).filter((p) => p.matches > 0);
+
+      const mostGoals = [...playerGoals].sort((a, b) => +b.avg - +a.avg)[0];
+      const fewestGoals = [...playerGoals].sort((a, b) => +a.avg - +b.avg)[0];
+
+      // Cel mai îndrăzneț scor (cu cel mai mare total de goluri)
+      let boldestScore = null;
+      for (const p of players) {
+        if (!p.predictions) continue;
+        for (const matchN in p.predictions) {
+          const pred = p.predictions[matchN];
+          if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+            const total = +pred.g1 + +pred.g2;
+            if (!boldestScore || total > boldestScore.total) {
+              const match = allMatches.find((m) => m.n === +matchN);
+              if (match) {
+                boldestScore = { player: p.name, score: pred.g1 + "-" + pred.g2, total, match: match };
+              }
+            }
+          }
+        }
+      }
+
+      // Cel mai mare consensus (un meci unde 1 scor are cele mai multe voturi)
+      let bestConsensus = null;
+      for (const m of allMatches) {
+        const stats = getMatchPredictionStats(m.n, players);
+        if (stats.groups.length > 0) {
+          const topGroup = stats.groups[0];
+          const ratio = topGroup.players.length / stats.total;
+          if (stats.total >= 3 && (!bestConsensus || ratio > bestConsensus.ratio)) {
+            bestConsensus = { match: m, score: topGroup.score, count: topGroup.players.length, total: stats.total, ratio };
+          }
+        }
+      }
+
+      // Jucător contrarian: cele mai puține scoruri "consensus" (top 2 cele mai populare per meci)
+      const contrarianScore = {};
+      for (const p of players) { contrarianScore[p.name] = 0; }
+      for (const m of allMatches) {
+        const stats = getMatchPredictionStats(m.n, players);
+        if (stats.groups.length === 0) continue;
+        // Top 2 grupe sunt "consensus"
+        const consensusPlayers = new Set();
+        stats.groups.slice(0, 2).forEach((g) => g.players.forEach((p) => consensusPlayers.add(p)));
+        for (const p of players) {
+          if (consensusPlayers.has(p.name)) contrarianScore[p.name]++;
+        }
+      }
+      // Cel cu cele mai puține "consensus" e cel mai contrarian
+      const totalPredsPerPlayer = {};
+      for (const p of players) {
+        totalPredsPerPlayer[p.name] = 0;
+        if (p.predictions) {
+          for (const k in p.predictions) {
+            const pred = p.predictions[k];
+            if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+              totalPredsPerPlayer[p.name]++;
+            }
+          }
+        }
+      }
+      const contrarianRanking = Object.entries(contrarianScore)
+        .map(([name, count]) => ({ name, consensusCount: count, totalPreds: totalPredsPerPlayer[name] || 0 }))
+        .filter((x) => x.totalPreds > 0)
+        .map((x) => ({ ...x, contrarianRate: 1 - (x.consensusCount / x.totalPreds) }))
+        .sort((a, b) => b.contrarianRate - a.contrarianRate);
+      const topContrarian = contrarianRanking[0];
+
+      // Total goluri prezise în turneu
+      const totalGoalsPredicted = playerGoals.reduce((sum, p) => sum + p.total, 0);
+      const totalPredictionsCount = playerGoals.reduce((sum, p) => sum + p.matches, 0);
+      const avgGoalsPerMatch = totalPredictionsCount > 0 ? (totalGoalsPredicted / totalPredictionsCount).toFixed(2) : "0.00";
+
+      // Bonus stats — câștigător turneu cel mai prezis
+      const championDist = getBonusDistribution("champion", players);
+      const topChampion = championDist[0];
+
+      // Echipa surpriză - vezi cine a pariat pe ce și cine e singurul cu acea echipă
+      const surpriseDist = getBonusDistribution("surprise", players);
+      const uniqueSurprise = surpriseDist.filter((g) => g.players.length === 1);
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+            <div className="font-bold text-amber-300">🎲 Fun Facts despre pronosticurile voastre</div>
+            <div className="text-xs text-stone-400 mt-1">Statistici amuzante și observații despre cum a pariat fiecare.</div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Card 1: Scorul cel mai prezis */}
+            <FactCard icon="⚽" title="SCORUL CEL MAI POPULAR" accent="amber">
+              {topScores.length > 0 ? (
+                <>
+                  <div className="text-4xl font-black text-amber-400 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{topScores[0].score}</div>
+                  <div className="text-xs text-stone-400">Apare de <span className="text-amber-300 font-bold">{topScores[0].count} ori</span> în toate pronosticurile</div>
+                  <div className="mt-3 space-y-1">
+                    {topScores.slice(1, 4).map((s) => (
+                      <div key={s.score} className="flex justify-between text-xs">
+                        <span className="font-mono text-stone-400">{s.score}</span>
+                        <span className="text-stone-500">{s.count}×</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Niciun pronostic încă</div>}
+            </FactCard>
+
+            {/* Card 2: Cel mai îndrăzneț scor */}
+            <FactCard icon="🥵" title="CEL MAI ÎNDRĂZNEȚ SCOR" accent="red">
+              {boldestScore ? (
+                <>
+                  <div className="text-4xl font-black text-red-400 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{boldestScore.score}</div>
+                  <div className="text-xs text-stone-400">
+                    <span className="font-bold text-red-300">{boldestScore.player}</span> a prezis acest scor la
+                  </div>
+                  <div className="text-xs text-stone-300 mt-1">
+                    {boldestScore.match.f1} {boldestScore.match.e1} – {boldestScore.match.e2} {boldestScore.match.f2}
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic">{boldestScore.total} goluri într-un singur meci 🤯</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Niciun pronostic încă</div>}
+            </FactCard>
+
+            {/* Card 3: Cel mai mare consensus */}
+            <FactCard icon="🤝" title="CEL MAI MARE CONSENSUS" accent="emerald">
+              {bestConsensus ? (
+                <>
+                  <div className="text-xs text-stone-400 mb-2">
+                    <span className="text-emerald-300 font-bold">{bestConsensus.count}/{bestConsensus.total}</span> au prezis
+                  </div>
+                  <div className="text-2xl font-black text-emerald-400" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{bestConsensus.score}</div>
+                  <div className="text-xs text-stone-300 mt-1">
+                    {bestConsensus.match.f1} {bestConsensus.match.e1} – {bestConsensus.match.e2} {bestConsensus.match.f2}
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic">{Math.round(bestConsensus.ratio * 100)}% acord</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Date insuficiente</div>}
+            </FactCard>
+
+            {/* Card 4: Cel mai contrarian jucător */}
+            <FactCard icon="🧠" title="CEL MAI CONTRARIAN" accent="purple">
+              {topContrarian ? (
+                <>
+                  <div className="text-2xl font-black text-purple-300 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{topContrarian.name}</div>
+                  <div className="text-xs text-stone-400">
+                    Doar <span className="text-purple-300 font-bold">{Math.round((1 - topContrarian.contrarianRate) * 100)}%</span> dintre pronosticurile sale sunt "consensus"
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic">Joacă pe contra-trend 🐎</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Date insuficiente</div>}
+            </FactCard>
+
+            {/* Card 5: Fan goleadelor */}
+            <FactCard icon="🔥" title="FAN GOLEADELOR" accent="orange">
+              {mostGoals ? (
+                <>
+                  <div className="text-2xl font-black text-orange-400 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{mostGoals.name}</div>
+                  <div className="text-xs text-stone-400">
+                    Avg <span className="text-orange-300 font-bold">{mostGoals.avg}</span> goluri/meci în pronosticuri
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic">{mostGoals.total} goluri în {mostGoals.matches} pronosticuri</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Date insuficiente</div>}
+            </FactCard>
+
+            {/* Card 6: Defensiv */}
+            <FactCard icon="🛡️" title="STILUL DEFENSIV" accent="sky">
+              {fewestGoals && fewestGoals.name !== (mostGoals && mostGoals.name) ? (
+                <>
+                  <div className="text-2xl font-black text-sky-300 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{fewestGoals.name}</div>
+                  <div className="text-xs text-stone-400">
+                    Avg <span className="text-sky-300 font-bold">{fewestGoals.avg}</span> goluri/meci — cel mai conservator
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic">{fewestGoals.total} goluri în {fewestGoals.matches} pronosticuri</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">—</div>}
+            </FactCard>
+
+            {/* Card 7: Total goluri */}
+            <FactCard icon="📊" title="TOTAL GOLURI PREZISE" accent="cyan">
+              <div className="text-4xl font-black text-cyan-300 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{totalGoalsPredicted.toLocaleString()}</div>
+              <div className="text-xs text-stone-400">în <span className="text-cyan-300 font-bold">{totalPredictionsCount}</span> pronosticuri</div>
+              <div className="text-[10px] text-stone-500 mt-2 italic">Avg {avgGoalsPerMatch}/meci · referință CM 2022: 2.69/meci</div>
+            </FactCard>
+
+            {/* Card 8: Câștigător consensus */}
+            <FactCard icon="🏆" title="FAVORIȚII LA CUPĂ" accent="amber">
+              {topChampion ? (
+                <>
+                  <div className="text-2xl font-black text-amber-400 mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{topChampion.answer}</div>
+                  <div className="text-xs text-stone-400">
+                    <span className="text-amber-300 font-bold">{topChampion.players.length}/{players.length}</span> credeți că ei iau Cupa
+                  </div>
+                  <div className="text-[10px] text-stone-500 mt-2 italic truncate" title={topChampion.players.join(", ")}>{topChampion.players.join(" · ")}</div>
+                </>
+              ) : <div className="text-stone-500 text-xs">Nicio predicție</div>}
+            </FactCard>
+          </div>
+
+          {/* Singulari la "echipa surpriză" */}
+          {uniqueSurprise.length > 0 && (
+            <div className="bg-stone-900/60 border border-purple-500/30 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🐎</span>
+                <h3 className="font-black tracking-widest text-sm" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>OUTLIERI LA "ECHIPA SURPRIZĂ"</h3>
+              </div>
+              <p className="text-xs text-stone-400 mb-3">Predicții unice — doar o singură persoană a votat aceste echipe ca surpriză:</p>
+              <div className="space-y-2">
+                {uniqueSurprise.map((g) => (
+                  <div key={g.answer} className="flex items-center justify-between bg-stone-950/50 border border-purple-500/20 rounded-md px-3 py-2">
+                    <div className="text-sm font-bold text-purple-200">{g.answer}</div>
+                    <div className="text-xs text-stone-400">Doar <span className="text-purple-300 font-bold">{g.players[0]}</span> a riscat</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function FactCard(props) {
+      const colors = {
+        amber: "border-amber-500/30 bg-amber-500/5",
+        red: "border-red-500/30 bg-red-500/5",
+        emerald: "border-emerald-500/30 bg-emerald-500/5",
+        purple: "border-purple-500/30 bg-purple-500/5",
+        orange: "border-orange-500/30 bg-orange-500/5",
+        sky: "border-sky-500/30 bg-sky-500/5",
+        cyan: "border-cyan-500/30 bg-cyan-500/5"
+      };
+      return (
+        <div className={"backdrop-blur border rounded-xl p-4 " + (colors[props.accent] || "border-stone-800 bg-stone-900/60")}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">{props.icon}</span>
+            <h3 className="font-black tracking-widest text-xs text-stone-300" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{props.title}</h3>
+          </div>
+          {props.children}
+        </div>
+      );
+    }
+
+    function AnalyticsBattle(props) {
+      const { players, results, scoring, allKnockoutMatches } = props;
+      const [player1, setPlayer1] = useState(players[0] ? players[0].name : "");
+      const [player2, setPlayer2] = useState(players[1] ? players[1].name : "");
+
+      const p1 = players.find((p) => p.name === player1);
+      const p2 = players.find((p) => p.name === player2);
+
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+
+      // Compară pronosticurile
+      let identical = 0, similar = 0, opposite = 0, totalCompared = 0;
+      const divergences = [];
+
+      if (p1 && p2 && p1.name !== p2.name) {
+        for (const m of allMatches) {
+          const pred1 = p1.predictions ? p1.predictions[m.n] : null;
+          const pred2 = p2.predictions ? p2.predictions[m.n] : null;
+          if (!pred1 || pred1.g1 == null || pred1.g2 == null || pred1.g1 === "" || pred1.g2 === "") continue;
+          if (!pred2 || pred2.g1 == null || pred2.g2 == null || pred2.g1 === "" || pred2.g2 === "") continue;
+
+          totalCompared++;
+          const sign1 = Math.sign(+pred1.g1 - +pred1.g2);
+          const sign2 = Math.sign(+pred2.g1 - +pred2.g2);
+
+          if (+pred1.g1 === +pred2.g1 && +pred1.g2 === +pred2.g2) {
+            identical++;
+          } else if (sign1 !== sign2) {
+            opposite++;
+            divergences.push({ match: m, p1Score: pred1.g1 + "-" + pred1.g2, p2Score: pred2.g1 + "-" + pred2.g2 });
+          } else {
+            similar++;
+          }
+        }
+      }
+
+      const pctIdentical = totalCompared > 0 ? Math.round(identical / totalCompared * 100) : 0;
+      const pctSimilar = totalCompared > 0 ? Math.round(similar / totalCompared * 100) : 0;
+      const pctOpposite = totalCompared > 0 ? Math.round(opposite / totalCompared * 100) : 0;
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-4">
+            <div className="font-bold text-rose-300">⚔️ Compară 2 jucători față-n față</div>
+            <div className="text-xs text-stone-400 mt-1">Vezi unde sunteți de acord și unde aveți pronosticuri opuse. Ideal pentru banter.</div>
+          </div>
+
+          {/* Selectoare jucători */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-stone-900/60 border border-rose-500/30 rounded-xl p-4">
+              <Label>JUCĂTOR 1</Label>
+              <select value={player1} onChange={(e) => setPlayer1(e.target.value)} style={inputStyleObj}>
+                {players.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="bg-stone-900/60 border border-rose-500/30 rounded-xl p-4">
+              <Label>JUCĂTOR 2</Label>
+              <select value={player2} onChange={(e) => setPlayer2(e.target.value)} style={inputStyleObj}>
+                {players.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {!p1 || !p2 || p1.name === p2.name ? (
+            <div className="bg-stone-900/40 border border-stone-800 rounded-xl p-8 text-center">
+              <div className="text-3xl mb-2">⚔️</div>
+              <div className="text-stone-400 text-sm">Selectează 2 jucători diferiți pentru a-i compara.</div>
+            </div>
+          ) : totalCompared === 0 ? (
+            <div className="bg-stone-900/40 border border-stone-800 rounded-xl p-8 text-center">
+              <div className="text-3xl mb-2">🤷</div>
+              <div className="text-stone-400 text-sm">Niciun meci comun la care ambii să fi completat pronosticuri.</div>
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <BattleStatCard label="IDENTICE" value={identical} total={totalCompared} pct={pctIdentical} accent="emerald" icon="✅" desc="Scoruri exacte la fel" />
+                <BattleStatCard label="SIMILARE" value={similar} total={totalCompared} pct={pctSimilar} accent="amber" icon="🟡" desc="Același câștigător" />
+                <BattleStatCard label="OPUSE" value={opposite} total={totalCompared} pct={pctOpposite} accent="rose" icon="❌" desc="Câștigători diferiți" />
+              </div>
+
+              {/* Vizualizare bar */}
+              <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-4">
+                <div className="text-xs tracking-[0.2em] text-stone-500 font-mono mb-2">DISTRIBUȚIA ACORDULUI · {totalCompared} meciuri comparate</div>
+                <div className="flex h-8 rounded-md overflow-hidden text-[10px] font-bold">
+                  {pctIdentical > 0 && <div className="bg-emerald-500 text-stone-950 flex items-center justify-center" style={{width: pctIdentical + "%"}}>{pctIdentical > 10 ? pctIdentical + "%" : ""}</div>}
+                  {pctSimilar > 0 && <div className="bg-amber-500 text-stone-950 flex items-center justify-center" style={{width: pctSimilar + "%"}}>{pctSimilar > 10 ? pctSimilar + "%" : ""}</div>}
+                  {pctOpposite > 0 && <div className="bg-rose-500 text-stone-950 flex items-center justify-center" style={{width: pctOpposite + "%"}}>{pctOpposite > 10 ? pctOpposite + "%" : ""}</div>}
+                </div>
+              </div>
+
+              {/* Verdict */}
+              <div className="bg-gradient-to-br from-rose-900/20 to-stone-900/40 border border-rose-500/30 rounded-xl p-5">
+                <div className="text-xs tracking-[0.2em] text-rose-300 font-mono mb-2">VERDICT</div>
+                <div className="text-stone-200 text-sm">
+                  {pctIdentical >= 25 && <p className="mb-2"><span className="font-bold text-emerald-300">{p1.name}</span> și <span className="font-bold text-emerald-300">{p2.name}</span> par să gândească la fel — sunteți frați gemeni la pronosticuri! 👯</p>}
+                  {pctIdentical < 10 && pctOpposite >= 25 && <p className="mb-2"><span className="font-bold text-rose-300">{p1.name}</span> vs <span className="font-bold text-rose-300">{p2.name}</span> = derby tactic! Aveți opinii foarte diferite. 🔥</p>}
+                  {pctIdentical < 25 && pctOpposite < 25 && <p className="mb-2"><span className="font-bold text-amber-300">{p1.name}</span> și <span className="font-bold text-amber-300">{p2.name}</span> sunteți pe aceeași lungime de undă în general, dar cu detalii diferite. 🤝</p>}
+                  <p className="text-xs text-stone-400 mt-2">La final de turneu vom vedea cine a gândit mai bine. 🧠</p>
+                </div>
+              </div>
+
+              {/* Divergences list */}
+              {divergences.length > 0 && (
+                <div className="bg-stone-900/60 border border-rose-500/30 rounded-xl p-5">
+                  <div className="text-xs tracking-[0.2em] text-rose-300 font-mono mb-3">⚡ MECIURILE UNDE NU SUNTEȚI DELOC DE ACORD ({divergences.length})</div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {divergences.slice(0, 30).map((d) => {
+                      const c = groupColors[d.match.isKnockout ? d.match.g : d.match.g];
+                      const matchLabel = d.match.isKnockout ? (d.match.phaseLabel + "·M" + d.match.n) : ("M" + d.match.n);
+                      return (
+                        <div key={d.match.n} className="bg-stone-950/50 rounded-md p-3 border" style={{borderColor: c.border + "30"}}>
+                          <div className="flex items-center justify-between gap-2 mb-2 text-xs">
+                            <span className="text-stone-500 font-mono">{matchLabel}</span>
+                            <span className="text-stone-300 truncate">{d.match.f1} {d.match.e1} – {d.match.e2} {d.match.f2}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm">
+                            <div className="flex-1 text-right">
+                              <div className="text-[10px] text-stone-500 font-mono">{p1.name}</div>
+                              <div className="font-bold text-rose-300 font-mono">{d.p1Score}</div>
+                            </div>
+                            <div className="text-stone-600">vs</div>
+                            <div className="flex-1">
+                              <div className="text-[10px] text-stone-500 font-mono">{p2.name}</div>
+                              <div className="font-bold text-rose-300 font-mono">{d.p2Score}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {divergences.length > 30 && <div className="text-center text-[10px] text-stone-500 italic">... și încă {divergences.length - 30} divergențe</div>}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    function BattleStatCard(props) {
+      const colors = {
+        emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-300", value: "text-emerald-400" },
+        amber: { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-300", value: "text-amber-400" },
+        rose: { bg: "bg-rose-500/10", border: "border-rose-500/30", text: "text-rose-300", value: "text-rose-400" }
+      };
+      const c = colors[props.accent];
+      return (
+        <div className={"border rounded-xl p-3 text-center " + c.bg + " " + c.border}>
+          <div className="text-2xl mb-1">{props.icon}</div>
+          <div className={"text-3xl font-black leading-none " + c.value} style={{fontFamily:'"Bebas Neue", sans-serif'}}>{props.value}</div>
+          <div className={"text-[10px] font-mono tracking-widest mt-1 " + c.text}>{props.label}</div>
+          <div className="text-[9px] text-stone-500 mt-1">{props.pct}% · {props.desc}</div>
         </div>
       );
     }
