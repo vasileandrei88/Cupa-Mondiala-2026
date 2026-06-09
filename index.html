@@ -280,6 +280,344 @@
       mostGoalsAgainst: 6  // echipa cu cele mai multe goluri primite în grupe
     };
 
+    // ========== ACHIEVEMENT DEFINITIONS ==========
+    // Fiecare achievement are: id, icon, title, desc, color, check(playerName, ctx) -> bool
+    const ACHIEVEMENTS = [
+      {
+        id: "first_exact", icon: "🎯", title: "LUNETISTUL",
+        desc: "Primul scor exact al turneului",
+        color: "amber",
+        check: (playerName, ctx) => {
+          // Cine a luat primul scor exact (cel mai mic număr meci)
+          let firstExact = null;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            if (!real || real.g1 == null || real.g2 == null || real.g1 === "" || real.g2 === "") continue;
+            for (const p of ctx.players) {
+              const pred = p.predictions ? p.predictions[m.n] : null;
+              if (!pred || pred.g1 == null || pred.g2 == null) continue;
+              if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) {
+                if (!firstExact || m.n < firstExact.matchN) {
+                  firstExact = { player: p.name, matchN: m.n };
+                }
+              }
+            }
+          }
+          return firstExact && firstExact.player === playerName;
+        }
+      },
+      {
+        id: "perfect_day", icon: "⚡", title: "HOT HAND",
+        desc: "3 scoruri exacte într-o singură zi de meciuri",
+        color: "orange",
+        check: (playerName, ctx) => {
+          // Grupez meciuri pe zile și caut zilele cu 3+ scoruri exacte
+          const matchesByDay = {};
+          for (const m of ctx.allMatches) {
+            if (!matchesByDay[m.d]) matchesByDay[m.d] = [];
+            matchesByDay[m.d].push(m);
+          }
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          for (const day in matchesByDay) {
+            let exactsInDay = 0;
+            for (const m of matchesByDay[day]) {
+              const real = ctx.results[m.n];
+              const pred = player.predictions[m.n];
+              if (!real || !pred || real.g1 == null || pred.g1 == null) continue;
+              if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) exactsInDay++;
+            }
+            if (exactsInDay >= 3) return true;
+          }
+          return false;
+        }
+      },
+      {
+        id: "streak_master", icon: "🔥", title: "STREAK MASTER",
+        desc: "3 meciuri la rând cu minim 3 puncte",
+        color: "red",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          let streak = 0;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null || real.g1 === "" || real.g2 === "") continue;
+            if (!pred || pred.g1 == null || pred.g2 == null || pred.g1 === "" || pred.g2 === "") { streak = 0; continue; }
+            const pts = calcPoints(pred, real, ctx.scoring);
+            if (pts >= ctx.scoring.diff) {
+              streak++;
+              if (streak >= 3) return true;
+            } else {
+              streak = 0;
+            }
+          }
+          return false;
+        }
+      },
+      {
+        id: "cold_streak", icon: "💀", title: "THE CURSE",
+        desc: "5 meciuri la rând cu 0 puncte",
+        color: "stone",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          let streak = 0;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null || real.g1 === "" || real.g2 === "") continue;
+            if (!pred || pred.g1 == null || pred.g2 == null) { streak = 0; continue; }
+            const pts = calcPoints(pred, real, ctx.scoring);
+            if (pts === 0) {
+              streak++;
+              if (streak >= 5) return true;
+            } else {
+              streak = 0;
+            }
+          }
+          return false;
+        }
+      },
+      {
+        id: "lucky_guess", icon: "🎲", title: "LUCKY GUESS",
+        desc: "Scor exact la un meci cu sub 25% consensus",
+        color: "purple",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null) continue;
+            if (!pred || pred.g1 == null || pred.g2 == null) continue;
+            if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) {
+              // Verific consensus
+              const stats = getMatchPredictionStats(m.n, ctx.players);
+              const myScore = pred.g1 + "-" + pred.g2;
+              const group = stats.groups.find((g) => g.score === myScore);
+              if (group && (group.players.length / stats.total) < 0.25) return true;
+            }
+          }
+          return false;
+        }
+      },
+      {
+        id: "dark_horse", icon: "🐎", title: "DARK HORSE",
+        desc: "Singurul cu un scor exact pe un meci",
+        color: "indigo",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null) continue;
+            if (!pred || pred.g1 == null || pred.g2 == null) continue;
+            if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) {
+              const stats = getMatchPredictionStats(m.n, ctx.players);
+              const myScore = pred.g1 + "-" + pred.g2;
+              const group = stats.groups.find((g) => g.score === myScore);
+              if (group && group.players.length === 1) return true;
+            }
+          }
+          return false;
+        }
+      },
+      {
+        id: "exact_5", icon: "🎯", title: "SHARPSHOOTER",
+        desc: "5+ scoruri exacte în total",
+        color: "emerald",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          let exacts = 0;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null) continue;
+            if (!pred || pred.g1 == null || pred.g2 == null) continue;
+            if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) exacts++;
+          }
+          return exacts >= 5;
+        }
+      },
+      {
+        id: "exact_10", icon: "🏆", title: "ORACLE",
+        desc: "10+ scoruri exacte în total — predictor de geniu",
+        color: "amber",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          let exacts = 0;
+          for (const m of ctx.allMatches) {
+            const real = ctx.results[m.n];
+            const pred = player.predictions[m.n];
+            if (!real || real.g1 == null || real.g2 == null) continue;
+            if (!pred || pred.g1 == null || pred.g2 == null) continue;
+            if (+pred.g1 === +real.g1 && +pred.g2 === +real.g2) exacts++;
+          }
+          return exacts >= 10;
+        }
+      },
+      {
+        id: "completionist", icon: "✅", title: "COMPLETIONIST",
+        desc: "A completat toate cele 72 pronosticuri din grupe",
+        color: "emerald",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.predictions) return false;
+          let count = 0;
+          for (const m of MATCHES) {
+            const pred = player.predictions[m.n];
+            if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") count++;
+          }
+          return count === 72;
+        }
+      },
+      {
+        id: "bonus_all", icon: "⭐", title: "BONUS HUNTER",
+        desc: "A completat toate cele 5 întrebări bonus",
+        color: "purple",
+        check: (playerName, ctx) => {
+          const player = ctx.players.find((p) => p.name === playerName);
+          if (!player || !player.bonus) return false;
+          const fields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"];
+          return fields.every((f) => player.bonus[f]);
+        }
+      },
+      {
+        id: "leader_now", icon: "👑", title: "LIDERUL ACTUAL",
+        desc: "Este pe locul 1 chiar acum",
+        color: "amber",
+        check: (playerName, ctx) => {
+          return ctx.standings[0] && ctx.standings[0].name === playerName && ctx.standings[0].played > 0;
+        }
+      },
+      {
+        id: "wooden_spoon_risk", icon: "🥄", title: "WOODEN SPOON DANGER",
+        desc: "Este pe ultimul loc — pericol de Wooden Spoon!",
+        color: "rose",
+        check: (playerName, ctx) => {
+          if (ctx.standings.length < 2) return false;
+          const last = ctx.standings[ctx.standings.length - 1];
+          return last.name === playerName && last.played > 0;
+        }
+      },
+      {
+        id: "contrarian", icon: "🧠", title: "CONTRARIAN",
+        desc: "Cele mai multe pronosticuri unice (nimeni la fel)",
+        color: "purple",
+        check: (playerName, ctx) => {
+          // Calculez câte scoruri unice are fiecare jucător
+          const uniqueCounts = {};
+          for (const p of ctx.players) { uniqueCounts[p.name] = 0; }
+          for (const m of ctx.allMatches) {
+            const stats = getMatchPredictionStats(m.n, ctx.players);
+            for (const g of stats.groups) {
+              if (g.players.length === 1) {
+                uniqueCounts[g.players[0]] = (uniqueCounts[g.players[0]] || 0) + 1;
+              }
+            }
+          }
+          const sorted = Object.entries(uniqueCounts).sort((a, b) => b[1] - a[1]);
+          // E "contrarian" cel cu cele mai multe scoruri unice, dar minim 3 pentru a fi semnificativ
+          return sorted.length > 0 && sorted[0][0] === playerName && sorted[0][1] >= 3;
+        }
+      },
+      {
+        id: "goal_addict", icon: "🔥", title: "GOAL ADDICT",
+        desc: "Cel mai mare avg goluri/meci în pronosticuri (>2.5)",
+        color: "orange",
+        check: (playerName, ctx) => {
+          const avgs = {};
+          for (const p of ctx.players) {
+            let total = 0, count = 0;
+            if (p.predictions) {
+              for (const k in p.predictions) {
+                const pred = p.predictions[k];
+                if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+                  total += +pred.g1 + +pred.g2; count++;
+                }
+              }
+            }
+            avgs[p.name] = count > 0 ? total / count : 0;
+          }
+          const sorted = Object.entries(avgs).sort((a, b) => b[1] - a[1]);
+          return sorted.length > 0 && sorted[0][0] === playerName && sorted[0][1] >= 2.5;
+        }
+      },
+      {
+        id: "defensive_mind", icon: "🛡️", title: "DEFENSIVE MIND",
+        desc: "Cel mai mic avg goluri/meci (sub 2.0) — stilul lui Mourinho",
+        color: "sky",
+        check: (playerName, ctx) => {
+          const avgs = {};
+          for (const p of ctx.players) {
+            let total = 0, count = 0;
+            if (p.predictions) {
+              for (const k in p.predictions) {
+                const pred = p.predictions[k];
+                if (pred && pred.g1 != null && pred.g2 != null && pred.g1 !== "" && pred.g2 !== "") {
+                  total += +pred.g1 + +pred.g2; count++;
+                }
+              }
+            }
+            avgs[p.name] = count > 0 ? total / count : 999;
+          }
+          const sorted = Object.entries(avgs).sort((a, b) => a[1] - b[1]);
+          return sorted.length > 0 && sorted[0][0] === playerName && sorted[0][1] < 2.0 && sorted[0][1] > 0;
+        }
+      },
+      {
+        id: "bonus_champion", icon: "🏆", title: "PROPHET",
+        desc: "A ghicit câștigătorul turneului",
+        color: "amber",
+        check: (playerName, ctx) => {
+          if (!ctx.bonusResults.champion) return false;
+          const player = ctx.players.find((p) => p.name === playerName);
+          return player && player.bonus && player.bonus.champion === ctx.bonusResults.champion;
+        }
+      },
+      {
+        id: "bonus_scorer", icon: "⚽", title: "GOLDEN BOOT SAGE",
+        desc: "A ghicit golgheterul turneului",
+        color: "amber",
+        check: (playerName, ctx) => {
+          if (!ctx.bonusResults.topScorer) return false;
+          const player = ctx.players.find((p) => p.name === playerName);
+          return player && player.bonus && player.bonus.topScorer && 
+            player.bonus.topScorer.toLowerCase().trim() === ctx.bonusResults.topScorer.toLowerCase().trim();
+        }
+      },
+      {
+        id: "comeback", icon: "📈", title: "COMEBACK KID",
+        desc: "Recuperează 5+ poziții pe parcurs (necesită istoric)",
+        color: "emerald",
+        check: (playerName, ctx) => {
+          if (!ctx.snapshots || ctx.snapshots.length < 2) return false;
+          // Verific dacă jucătorul a fost vreodată cu 5+ poziții mai jos decât acum
+          const currentRank = ctx.standings.findIndex((s) => s.name === playerName);
+          if (currentRank === -1) return false;
+          for (const snap of ctx.snapshots) {
+            const pastRank = snap.standings ? snap.standings.findIndex((s) => s.name === playerName) : -1;
+            if (pastRank !== -1 && pastRank - currentRank >= 5) return true;
+          }
+          return false;
+        }
+      }
+    ];
+
+    // Calculează achievements pentru un jucător
+    function getPlayerAchievements(playerName, players, results, scoring, allKnockoutMatches, standings, bonusResults, snapshots) {
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+      const ctx = { players, results, scoring, allMatches, standings, bonusResults, snapshots: snapshots || [] };
+      return ACHIEVEMENTS.filter((a) => {
+        try { return a.check(playerName, ctx); } catch (e) { console.warn("Achievement check error:", a.id, e); return false; }
+      });
+    }
+
     function calcPoints(pred, real, scoring) {
       if (!pred || pred.g1 === "" || pred.g2 === "" || pred.g1 == null || pred.g2 == null) return null;
       if (!real || real.g1 === "" || real.g2 === "" || real.g1 == null || real.g2 == null) return null;
@@ -358,6 +696,8 @@
     async function fbSavePlayer(p) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "players", p.name.toLowerCase()), p); }
     async function fbDeletePlayer(name) { const FB = window.__FB__; await FB.deleteDoc(FB.doc(FB.db, "players", name.toLowerCase())); }
     async function fbSaveKnockoutPhase(phaseKey, data) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "knockout_" + phaseKey), data); }
+    async function fbSaveSnapshot(date, standings) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "snapshots", date), { date, standings, savedAt: new Date().toISOString() }); }
+    async function fbSaveStickyNote(note) { const FB = window.__FB__; await FB.setDoc(FB.doc(FB.db, "meta", "stickyNote"), note || { text: "", active: false }); }
 
     // Construiește meciurile unei faze fuzionând structura statică cu echipele introduse de admin
     function buildKnockoutMatches(phaseKey, phaseData) {
@@ -497,6 +837,8 @@
       const [results, setResults] = useState({});
       const [bonusResults, setBonusResults] = useState({});
       const [knockouts, setKnockouts] = useState({}); // { R32: {...}, R16: {...}, ... }
+      const [snapshots, setSnapshots] = useState([]);
+      const [stickyNote, setStickyNote] = useState({ text: "", active: false });
       const [loading, setLoading] = useState(true);
       const [savingState, setSavingState] = useState("");
       const [toast, setToast] = useState(null);
@@ -538,6 +880,19 @@
           }, (err) => console.error("knockout " + phaseKey + " error:", err))
         );
 
+        // Listener pentru snapshots (istoric clasament)
+        const u6 = FB.onSnapshot(FB.collection(FB.db, "snapshots"), (snap) => {
+          const arr = [];
+          snap.forEach((d) => arr.push(d.data()));
+          arr.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+          setSnapshots(arr);
+        }, (err) => console.error("snapshots error:", err));
+
+        // Listener pentru sticky note admin
+        const u7 = FB.onSnapshot(FB.doc(FB.db, "meta", "stickyNote"), (snap) => {
+          setStickyNote(snap.exists() ? snap.data() : { text: "", active: false });
+        }, (err) => console.error("stickyNote error:", err));
+
         // Migrare automată: dacă există vechiul doc 'knockoutR32', copiem datele și ștergem
         FB.getDoc(FB.doc(FB.db, "meta", "knockoutR32")).then(async (oldSnap) => {
           if (oldSnap.exists() && Object.keys(oldSnap.data()).length > 0) {
@@ -549,7 +904,7 @@
           }
         }).catch((e) => console.warn("Migration check failed:", e));
 
-        return () => { u1(); u2(); u3(); u4(); knockoutUnsubs.forEach((unsub) => unsub()); };
+        return () => { u1(); u2(); u3(); u4(); u6(); u7(); knockoutUnsubs.forEach((unsub) => unsub()); };
       }, [fbReady]);
 
       const wrapSave = async (fn) => {
@@ -572,6 +927,8 @@
       const saveResults = (r) => wrapSave(() => fbSaveResults(r));
       const saveBonusResults = (r) => wrapSave(() => fbSaveBonusResults(r));
       const saveKnockoutPhase = (phaseKey, data) => wrapSave(() => fbSaveKnockoutPhase(phaseKey, data));
+      const saveSnapshot = (date, standings) => wrapSave(() => fbSaveSnapshot(date, standings));
+      const saveStickyNote = (note) => wrapSave(() => fbSaveStickyNote(note));
 
       // Lista meciurilor knockout per fază (cu echipele setate de admin)
       const knockoutMatches = useMemo(() => {
@@ -658,12 +1015,12 @@
         <div className="min-h-screen text-stone-100" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(220, 38, 38, 0.15), transparent 60%), radial-gradient(ellipse 60% 80% at 100% 100%, rgba(37, 99, 235, 0.1), transparent 60%), linear-gradient(180deg, #0c0a09 0%, #0c0a09 100%)" }}>
           <Header view={view} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} isAdmin={isAdmin} isLocked={isLocked} savingState={savingState} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
-            {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayer={savePlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} />}
+            {view === "home" && <HomeView config={config} isLocked={isLocked} players={players} standings={standings} setView={setView} currentPlayer={currentPlayer} setCurrentPlayer={setCurrentPlayer} savePlayer={savePlayer} isAdmin={isAdmin} setIsAdmin={setIsAdmin} adminPassword={config.adminPassword} showToast={showToast} results={results} stickyNote={stickyNote} allKnockoutMatches={allKnockoutMatches} />}
             {view === "predict" && currentPlayer && <PredictView player={currentPlayer} isLocked={isLocked} results={results} scoring={config.scoring} knockoutMatches={knockoutMatches} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "bonus" && currentPlayer && <BonusView player={currentPlayer} isLocked={isLocked} bonusResults={bonusResults} updatePlayer={(u) => { setCurrentPlayer(u); savePlayer(u); }} />}
             {view === "leaderboard" && <LeaderboardView standings={standings} players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
-            {view === "analytics" && <AnalyticsView players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} standings={standings} />}
-            {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} knockouts={knockouts} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} saveKnockoutPhase={saveKnockoutPhase} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} />}
+            {view === "analytics" && <AnalyticsView players={players} results={results} bonusResults={bonusResults} scoring={config.scoring} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} standings={standings} snapshots={snapshots} />}
+            {view === "admin" && isAdmin && <AdminView config={config} results={results} bonusResults={bonusResults} knockouts={knockouts} saveConfig={saveConfig} saveResults={saveResults} saveBonusResults={saveBonusResults} saveKnockoutPhase={saveKnockoutPhase} players={players} deletePlayer={deletePlayer} showToast={showToast} askConfirm={askConfirm} knockoutMatches={knockoutMatches} allKnockoutMatches={allKnockoutMatches} stickyNote={stickyNote} saveStickyNote={saveStickyNote} standings={standings} saveSnapshot={saveSnapshot} snapshots={snapshots} />}
           </main>
           <footer className="border-t border-stone-800 mt-16 py-6 text-center text-xs text-stone-500 font-mono tracking-widest">
             <span style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 16, letterSpacing: "0.1em"}}>WC26 PREDICTOR</span>
@@ -800,36 +1157,117 @@
             <div className="text-3xl">💰</div>
             <div>
               <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">PREMII CONCURS</div>
-              <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>FOND TOTAL · 300 RON</div>
+              <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>FOND TOTAL · 1100 RON</div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-gradient-to-br from-amber-400 to-yellow-500 rounded-lg p-4 text-stone-950 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥇</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>180</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>650</div>
               <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 1</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">câștigătorul concursului</div>
             </div>
             <div className="bg-gradient-to-br from-stone-300 to-stone-400 rounded-lg p-4 text-stone-950 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-20">🥈</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>90</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>250</div>
               <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 2</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">vicecampion</div>
             </div>
+            <div className="bg-gradient-to-br from-orange-600 to-orange-800 rounded-lg p-4 text-stone-100 relative overflow-hidden">
+              <div className="text-4xl absolute -top-1 -right-1 opacity-25">🥉</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>150</div>
+              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL 3</div>
+              <div className="text-[10px] mt-1 opacity-80 font-mono">bronzul concursului</div>
+            </div>
             <div className="bg-gradient-to-br from-stone-700 to-stone-800 rounded-lg p-4 text-stone-200 relative overflow-hidden">
               <div className="text-4xl absolute -top-1 -right-1 opacity-30">🥄</div>
-              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>30</div>
-              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL ULTIMUL</div>
+              <div className="text-5xl font-black leading-none" style={{fontFamily:'"Bebas Neue", sans-serif'}}>50</div>
+              <div className="text-[10px] tracking-[0.2em] font-bold mt-2">RON · LOCUL ULTIM</div>
               <div className="text-[10px] mt-1 opacity-70 font-mono">"wooden spoon" 🤣</div>
             </div>
           </div>
-          <div className="text-[10px] text-stone-500 mt-4 font-mono">Miza: 50 RON / persoană · 6 jucători · Premiu garantat pentru ultimul ca să nu plece nimeni cu mâna goală :)</div>
+          <div className="text-[10px] text-stone-500 mt-4 font-mono">Miza: 110 RON / persoană · 10 jucători · Premiu garantat pentru ultimul ca să nu plece nimeni cu mâna goală :)</div>
+        </div>
+      );
+    }
+
+    function MatchDayCenter(props) {
+      const { matches, isToday, players, results } = props;
+
+      return (
+        <div className="bg-gradient-to-br from-emerald-900/20 to-cyan-900/10 backdrop-blur border-2 border-emerald-500/30 rounded-xl p-5 sm:p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-3xl">{isToday ? "🔴" : "📅"}</div>
+            <div>
+              <div className="text-xs tracking-[0.25em] text-emerald-400 font-mono">{isToday ? "LIVE · MATCH DAY" : "URMEAZĂ ÎN CURÂND"}</div>
+              <div className="text-lg sm:text-xl font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>
+                {isToday ? "MECIURILE DE AZI · " + matches.length + (matches.length === 1 ? " MECI" : " MECIURI") : "URMĂTOARELE MECIURI · " + matches[0].d}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {matches.map((m) => <MatchDayCard key={m.n} match={m} players={players} results={results} />)}
+          </div>
+        </div>
+      );
+    }
+
+    function MatchDayCard(props) {
+      const { match: m, players, results } = props;
+      const stats = getMatchPredictionStats(m.n, players);
+      const real = results[m.n];
+      const hasResult = real && real.g1 !== "" && real.g2 !== "" && real.g1 != null && real.g2 != null;
+      const c = groupColors[m.isKnockout ? m.g : m.g];
+      const labelText = m.isKnockout ? (m.phaseLabel + " · M" + m.n) : ("GR. " + m.g + " · M" + m.n);
+
+      return (
+        <div className="bg-stone-950/60 border rounded-lg p-3 sm:p-4" style={{borderColor: c.border + "40"}}>
+          <div className="flex items-center justify-between mb-2 text-xs">
+            <span className="px-2 py-0.5 text-[10px] font-black rounded font-mono tracking-widest" style={{backgroundColor: c.bg, color: c.text}}>{labelText}</span>
+            <span className="text-stone-400 font-mono">{m.d} · {m.t}</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="flex-1 text-right min-w-0">
+              <div className="text-2xl">{m.f1}</div>
+              <div className="text-sm font-bold truncate">{m.e1}</div>
+            </div>
+            <div className="text-center shrink-0">
+              {hasResult ? (
+                <div className="font-black text-emerald-400 text-3xl" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{real.g1} – {real.g2}</div>
+              ) : (
+                <div className="text-stone-600 text-xl font-mono">vs</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl">{m.f2}</div>
+              <div className="text-sm font-bold truncate">{m.e2}</div>
+            </div>
+          </div>
+
+          {stats.total > 0 && (
+            <div className="pt-2 border-t border-stone-800 space-y-1">
+              <div className="text-[10px] text-stone-500 font-mono tracking-widest">TOP PRONOSTICURI ({stats.total}/{players.length} jucători)</div>
+              {stats.groups.slice(0, 3).map((g) => {
+                const isCorrectExact = hasResult && +real.g1 === g.g1 && +real.g2 === g.g2;
+                return (
+                  <div key={g.score} className="flex items-center gap-2 text-xs">
+                    <span className={"font-black w-10 shrink-0 " + (isCorrectExact ? "text-amber-400" : "text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 14}}>{g.score}</span>
+                    <span className="text-stone-500">{g.players.length}×</span>
+                    <span className="text-stone-400 truncate text-[11px]" title={g.players.join(", ")}>{g.players.join(" · ")}</span>
+                    {isCorrectExact && <span className="bg-amber-400 text-stone-950 px-1.5 rounded text-[10px] font-black ml-auto">CORECT ✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }
 
     function HomeView(props) {
-      const { config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayer, isAdmin, setIsAdmin, adminPassword, showToast } = props;
+      const { config, isLocked, players, standings, setView, currentPlayer, setCurrentPlayer, savePlayer, isAdmin, setIsAdmin, adminPassword, showToast, results, stickyNote, allKnockoutMatches } = props;
       const [showLogin, setShowLogin] = useState(false);
       const [showRegister, setShowRegister] = useState(false);
       const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -842,8 +1280,44 @@
       const days = Math.max(0, Math.floor(msLeft / 86400000));
       const hours = Math.max(0, Math.floor((msLeft % 86400000) / 3600000));
       const minutes = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
+
+      // Match Day Center: meciuri de azi
+      const today = new Date();
+      const todayStr = String(today.getDate()).padStart(2, "0") + "." + String(today.getMonth() + 1).padStart(2, "0");
+      const allMatchesCombined = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+      const todayMatches = allMatchesCombined.filter((m) => m.d === todayStr);
+      // Dacă nu sunt azi, găsim următoarele meciuri (în 1-7 zile)
+      let upcomingMatches = todayMatches;
+      let isToday = true;
+      if (todayMatches.length === 0) {
+        for (let dayOffset = 1; dayOffset <= 7; dayOffset++) {
+          const future = new Date(today);
+          future.setDate(today.getDate() + dayOffset);
+          const futureStr = String(future.getDate()).padStart(2, "0") + "." + String(future.getMonth() + 1).padStart(2, "0");
+          const dayMatches = allMatchesCombined.filter((m) => m.d === futureStr);
+          if (dayMatches.length > 0) {
+            upcomingMatches = dayMatches.slice(0, 4);
+            isToday = false;
+            break;
+          }
+        }
+      }
+
       return (
         <div className="space-y-8">
+          {/* Sticky Note de la admin */}
+          {stickyNote && stickyNote.active && stickyNote.text && (
+            <div className="bg-yellow-400/15 border-2 border-yellow-400/50 rounded-xl p-4 sm:p-5 relative" style={{boxShadow: "0 0 30px rgba(250, 204, 21, 0.15)"}}>
+              <div className="flex items-start gap-3">
+                <div className="text-3xl shrink-0">📌</div>
+                <div className="flex-1">
+                  <div className="text-xs tracking-[0.25em] text-yellow-300 font-mono mb-1">MESAJ DE LA ADMIN</div>
+                  <div className="text-stone-100 text-sm sm:text-base whitespace-pre-wrap">{stickyNote.text}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="relative overflow-hidden rounded-2xl border border-stone-800 bg-gradient-to-br from-stone-900 to-stone-950 p-6 sm:p-10">
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #fbbf24 0%, transparent 40%), radial-gradient(circle at 20% 80%, #dc2626 0%, transparent 40%)" }} />
             <div className="relative">
@@ -864,6 +1338,11 @@
           </div>
 
           <PrizesCard />
+
+          {/* Match Day Center - meciurile de azi / următoare */}
+          {upcomingMatches.length > 0 && (
+            <MatchDayCenter matches={upcomingMatches} isToday={isToday} players={players} results={results} />
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <InfoCard icon="🏆" label="LIDER" value={standings[0] && standings[0].played > 0 ? standings[0].name : "—"} subValue={standings[0] && standings[0].played > 0 ? standings[0].total + " pct" : "încă nu sunt rezultate"} accent="amber" />
@@ -1307,12 +1786,32 @@
       const matchesPlayed = MATCHES.filter((m) => results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
       const koPlayed = (allKnockoutMatches || []).filter((m) => m.isReady && results[m.n] && results[m.n].g1 !== "" && results[m.n].g2 !== "" && results[m.n].g1 != null && results[m.n].g2 != null).length;
       const koReady = (allKnockoutMatches || []).filter((m) => m.isReady).length;
+
+      // Generez text pentru share
+      const shareText = (() => {
+        let txt = "🏆 CLASAMENT CM 2026\n\n";
+        const medalEmojis = ["🥇", "🥈", "🥉"];
+        standings.forEach((s, i) => {
+          const isLast = i === standings.length - 1 && standings.length > 1 && s.played > 0;
+          const prefix = i < 3 ? medalEmojis[i] : (i + 1) + ".";
+          const suffix = isLast ? " 🥄" : "";
+          txt += prefix + " " + s.name + " - " + s.total + "p" + suffix + "\n";
+        });
+        txt += "\n📊 Grupe: " + matchesPlayed + "/72";
+        if (koReady > 0) txt += " · Eliminatorii: " + koPlayed + "/" + koReady;
+        txt += "\n\n👉 vezi tot: https://vasileandrei88.github.io/Cupa-Mondiala-2026/";
+        return txt;
+      })();
+
       return (
         <div className="space-y-6">
-          <div>
-            <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">CLASAMENT GENERAL</div>
-            <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CINE-I <span className="text-amber-400">CEL MAI BUN?</span></h2>
-            <p className="text-stone-400 text-sm mt-2">Grupe: {matchesPlayed}/72{koReady > 0 && <> · Eliminatorii: {koPlayed}/{koReady}</>} · {players.length} jucători înscriși</p>
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <div className="text-xs tracking-[0.25em] text-amber-400 font-mono">CLASAMENT GENERAL</div>
+              <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CINE-I <span className="text-amber-400">CEL MAI BUN?</span></h2>
+              <p className="text-stone-400 text-sm mt-2">Grupe: {matchesPlayed}/72{koReady > 0 && <> · Eliminatorii: {koPlayed}/{koReady}</>} · {players.length} jucători înscriși</p>
+            </div>
+            {standings.length > 0 && <WhatsAppShareButton text={shareText} label="📱 Distribuie clasamentul" />}
           </div>
           {standings.length === 0 ? <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-12 text-center text-stone-500">Niciun jucător încă.</div>
           : <div className="bg-stone-900/60 backdrop-blur border border-stone-800 rounded-xl overflow-hidden">
@@ -1435,7 +1934,7 @@
 
     // ========== ANALYTICS ==========
     function AnalyticsView(props) {
-      const { players, results, bonusResults, scoring, knockoutMatches, allKnockoutMatches, standings } = props;
+      const { players, results, bonusResults, scoring, knockoutMatches, allKnockoutMatches, standings, snapshots } = props;
       const [tab, setTab] = useState("matches");
 
       return (
@@ -1447,7 +1946,15 @@
           </div>
 
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["matches", "⚽ MECIURI"], ["bonus", "⭐ ÎNTREBĂRI BONUS"], ["facts", "🎲 FUN FACTS"], ["battle", "⚔️ BATTLE CARDS"]].map((arr) => (
+            {[
+              ["matches", "⚽ MECIURI"],
+              ["bonus", "⭐ BONUS"],
+              ["facts", "🎲 FUN FACTS"],
+              ["achievements", "🏅 TROFEE"],
+              ["timeline", "📈 TIMELINE"],
+              ["shame", "🤡 HALL OF SHAME"],
+              ["battle", "⚔️ BATTLE"]
+            ].map((arr) => (
               <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-cyan-400 text-cyan-300" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>
             ))}
           </div>
@@ -1455,6 +1962,9 @@
           {tab === "matches" && <AnalyticsMatches players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
           {tab === "bonus" && <AnalyticsBonus players={players} bonusResults={bonusResults} />}
           {tab === "facts" && <AnalyticsFunFacts players={players} results={results} bonusResults={bonusResults} scoring={scoring} allKnockoutMatches={allKnockoutMatches} standings={standings} />}
+          {tab === "achievements" && <AnalyticsAchievements players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} standings={standings} bonusResults={bonusResults} snapshots={snapshots} />}
+          {tab === "timeline" && <AnalyticsTimeline players={players} snapshots={snapshots} standings={standings} />}
+          {tab === "shame" && <AnalyticsHallOfShame players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
           {tab === "battle" && <AnalyticsBattle players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
         </div>
       );
@@ -2165,6 +2675,355 @@
       );
     }
 
+    // ========== WHATSAPP SHARE HELPER ==========
+    function shareToWhatsApp(text) {
+      const encoded = encodeURIComponent(text);
+      window.open("https://wa.me/?text=" + encoded, "_blank");
+    }
+
+    function WhatsAppShareButton(props) {
+      const { text, label, small } = props;
+      return (
+        <button type="button" onClick={() => shareToWhatsApp(text)} className={"bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 " + (small ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.1em"}}>
+          <span>📱</span>
+          <span>{label || "Distribuie pe WhatsApp"}</span>
+        </button>
+      );
+    }
+
+    // ========== ACHIEVEMENTS TAB ==========
+    function AnalyticsAchievements(props) {
+      const { players, results, scoring, allKnockoutMatches, standings, bonusResults, snapshots } = props;
+
+      // Calculez achievements pentru fiecare jucător
+      const playerAchievements = players.map((p) => ({
+        name: p.name,
+        achievements: getPlayerAchievements(p.name, players, results, scoring, allKnockoutMatches, standings, bonusResults, snapshots)
+      })).sort((a, b) => b.achievements.length - a.achievements.length);
+
+      const totalEarned = playerAchievements.reduce((sum, p) => sum + p.achievements.length, 0);
+
+      // Generez text pentru share
+      const shareText = (() => {
+        let txt = "🏅 TROFEE CONCURS CM 2026\n\n";
+        for (const pa of playerAchievements) {
+          if (pa.achievements.length === 0) continue;
+          txt += pa.name + ": " + pa.achievements.map((a) => a.icon + " " + a.title).join(", ") + "\n";
+        }
+        txt += "\n👉 vezi tot: https://vasileandrei88.github.io/Cupa-Mondiala-2026/";
+        return txt;
+      })();
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div>
+              <div className="font-bold text-amber-300">🏅 Trofee câștigate · {totalEarned} total</div>
+              <div className="text-xs text-stone-400 mt-1">{ACHIEVEMENTS.length} medalii posibile. Sunt câștigate automat pe baza performanței.</div>
+            </div>
+            <WhatsAppShareButton text={shareText} label="Distribuie trofeele" small />
+          </div>
+
+          {/* Card per jucător cu achievements */}
+          <div className="space-y-3">
+            {playerAchievements.map((pa) => (
+              <PlayerAchievementsCard key={pa.name} playerName={pa.name} earnedAchievements={pa.achievements} />
+            ))}
+          </div>
+
+          {/* Lista cu toate achievements posibile */}
+          <details className="bg-stone-900/40 border border-stone-800 rounded-xl p-4">
+            <summary className="cursor-pointer font-bold text-stone-300 text-sm">📜 Vezi toate cele {ACHIEVEMENTS.length} medalii posibile</summary>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {ACHIEVEMENTS.map((a) => (
+                <div key={a.id} className="bg-stone-950/60 border border-stone-800 rounded-md p-3 flex items-start gap-3">
+                  <div className="text-2xl shrink-0 opacity-50">{a.icon}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-stone-300">{a.title}</div>
+                    <div className="text-[10px] text-stone-500 mt-0.5">{a.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      );
+    }
+
+    function PlayerAchievementsCard(props) {
+      const { playerName, earnedAchievements } = props;
+      const accentColors = {
+        amber: "from-amber-500/30 to-orange-500/10 border-amber-500/40",
+        orange: "from-orange-500/30 to-red-500/10 border-orange-500/40",
+        red: "from-red-500/30 to-rose-500/10 border-red-500/40",
+        emerald: "from-emerald-500/30 to-teal-500/10 border-emerald-500/40",
+        sky: "from-sky-500/30 to-blue-500/10 border-sky-500/40",
+        purple: "from-purple-500/30 to-pink-500/10 border-purple-500/40",
+        indigo: "from-indigo-500/30 to-violet-500/10 border-indigo-500/40",
+        rose: "from-rose-500/30 to-pink-500/10 border-rose-500/40",
+        stone: "from-stone-700/30 to-stone-800/10 border-stone-600/40"
+      };
+
+      return (
+        <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-lg font-black" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.05em"}}>{playerName}</div>
+            <div className="text-xs text-stone-400 font-mono">{earnedAchievements.length}/{ACHIEVEMENTS.length} medalii</div>
+          </div>
+          {earnedAchievements.length === 0 ? (
+            <div className="text-center py-4 text-xs text-stone-500 italic">Niciun trofeu încă. Curaj!</div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {earnedAchievements.map((a) => (
+                <div key={a.id} className={"bg-gradient-to-br border rounded-lg px-3 py-2 flex items-center gap-2 " + (accentColors[a.color] || accentColors.amber)} title={a.desc}>
+                  <span className="text-xl">{a.icon}</span>
+                  <div>
+                    <div className="text-xs font-black tracking-widest" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.1em"}}>{a.title}</div>
+                    <div className="text-[9px] text-stone-400">{a.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ========== TIMELINE TAB ==========
+    function AnalyticsTimeline(props) {
+      const { players, snapshots, standings } = props;
+
+      if (!snapshots || snapshots.length < 2) {
+        return (
+          <div className="bg-stone-900/40 border border-stone-800 rounded-xl p-8 text-center">
+            <div className="text-4xl mb-3">📈</div>
+            <h3 className="text-xl font-black mb-2" style={{fontFamily:'"Bebas Neue", sans-serif'}}>TIMELINE INDISPONIBIL ÎNCĂ</h3>
+            <p className="text-sm text-stone-400 max-w-md mx-auto">Avem nevoie de minim 2 zile de meciuri jucate pentru a construi un grafic util.</p>
+            <p className="text-xs text-stone-500 mt-3">Admin: salvează un snapshot zilnic din panoul Admin → Snapshot.</p>
+          </div>
+        );
+      }
+
+      // Pregătesc datele pentru graficul SVG
+      const playerColors = ["#fbbf24", "#10b981", "#3b82f6", "#a855f7", "#ef4444", "#f97316", "#06b6d4", "#ec4899", "#84cc16"];
+      const allPlayerNames = new Set();
+      snapshots.forEach((snap) => {
+        if (snap.standings) snap.standings.forEach((s) => allPlayerNames.add(s.name));
+      });
+      players.forEach((p) => allPlayerNames.add(p.name));
+
+      const playerList = Array.from(allPlayerNames);
+
+      // Pentru fiecare jucător, lista de [snapshot_index, total_points]
+      const lines = playerList.map((name, idx) => {
+        const points = snapshots.map((snap) => {
+          if (snap.standings) {
+            const found = snap.standings.find((s) => s.name === name);
+            return found ? found.total : 0;
+          }
+          return 0;
+        });
+        return { name, points, color: playerColors[idx % playerColors.length] };
+      });
+
+      const maxPoints = Math.max(1, ...lines.flatMap((l) => l.points));
+      const width = 700, height = 320, padding = { left: 40, right: 20, top: 20, bottom: 40 };
+      const plotW = width - padding.left - padding.right;
+      const plotH = height - padding.top - padding.bottom;
+
+      const xStep = snapshots.length > 1 ? plotW / (snapshots.length - 1) : 0;
+
+      const buildPath = (pts) => {
+        return pts.map((p, i) => {
+          const x = padding.left + i * xStep;
+          const y = padding.top + plotH - (p / maxPoints) * plotH;
+          return (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
+        }).join(" ");
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+            <div className="font-bold text-cyan-300">📈 Evoluția clasamentului pe zile</div>
+            <div className="text-xs text-stone-400 mt-1">{snapshots.length} snapshot-uri salvate. Cu fiecare meci se adaugă puncte noi.</div>
+          </div>
+
+          {/* SVG Chart */}
+          <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-4 overflow-x-auto">
+            <svg viewBox={"0 0 " + width + " " + height} style={{width: "100%", height: "auto", minWidth: "600px"}}>
+              {/* Grid lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((p) => {
+                const y = padding.top + plotH - p * plotH;
+                return (
+                  <g key={p}>
+                    <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#44403c" strokeWidth="0.5" strokeDasharray="2 2" />
+                    <text x={padding.left - 8} y={y + 3} fill="#78716c" fontSize="9" textAnchor="end" fontFamily="monospace">{Math.round(maxPoints * p)}</text>
+                  </g>
+                );
+              })}
+              {/* X axis labels - snapshot dates */}
+              {snapshots.map((snap, i) => {
+                const x = padding.left + i * xStep;
+                const showLabel = i === 0 || i === snapshots.length - 1 || i % Math.ceil(snapshots.length / 8) === 0;
+                if (!showLabel) return null;
+                return <text key={i} x={x} y={height - padding.bottom + 15} fill="#78716c" fontSize="9" textAnchor="middle" fontFamily="monospace">{snap.date}</text>;
+              })}
+              {/* Lines */}
+              {lines.map((l) => (
+                <g key={l.name}>
+                  <path d={buildPath(l.points)} stroke={l.color} strokeWidth="2" fill="none" />
+                  {l.points.map((p, i) => {
+                    const x = padding.left + i * xStep;
+                    const y = padding.top + plotH - (p / maxPoints) * plotH;
+                    return <circle key={i} cx={x} cy={y} r="3" fill={l.color} />;
+                  })}
+                </g>
+              ))}
+            </svg>
+          </div>
+
+          {/* Legend */}
+          <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-4">
+            <div className="text-[10px] tracking-widest text-stone-500 font-mono mb-2">LEGENDĂ</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {lines.map((l) => {
+                const currentRank = standings.findIndex((s) => s.name === l.name);
+                const currentPoints = l.points[l.points.length - 1] || 0;
+                return (
+                  <div key={l.name} className="flex items-center gap-2 text-xs">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{backgroundColor: l.color}}></div>
+                    <span className="font-bold truncate">{l.name}</span>
+                    <span className="text-stone-500 ml-auto">{currentPoints}p</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ========== HALL OF SHAME TAB ==========
+    function AnalyticsHallOfShame(props) {
+      const { players, results, scoring, allKnockoutMatches } = props;
+
+      const allMatches = [...MATCHES, ...((allKnockoutMatches || []).filter((m) => m.isReady))];
+
+      // Calculez "ratele" - pronosticuri cu diferență mare față de real
+      const bloopers = [];
+      for (const m of allMatches) {
+        const real = results[m.n];
+        if (!real || real.g1 == null || real.g2 == null || real.g1 === "" || real.g2 === "") continue;
+        for (const p of players) {
+          const pred = p.predictions ? p.predictions[m.n] : null;
+          if (!pred || pred.g1 == null || pred.g2 == null || pred.g1 === "" || pred.g2 === "") continue;
+          const pts = calcPoints(pred, real, scoring);
+          if (pts === 0) {
+            // Calculez "distanța" totală: diferența scor + dacă a prezis câștigătorul invers
+            const goalDiff = Math.abs(+pred.g1 - +real.g1) + Math.abs(+pred.g2 - +real.g2);
+            const signPred = Math.sign(+pred.g1 - +pred.g2);
+            const signReal = Math.sign(+real.g1 - +real.g2);
+            const wrongWinner = signPred !== signReal;
+            const score = goalDiff + (wrongWinner ? 3 : 0);
+            bloopers.push({
+              player: p.name,
+              match: m,
+              predicted: pred.g1 + "-" + pred.g2,
+              actual: real.g1 + "-" + real.g2,
+              score,
+              goalDiff,
+              wrongWinner
+            });
+          }
+        }
+      }
+
+      // Sortez descrescător după "scor de ratare"
+      bloopers.sort((a, b) => b.score - a.score);
+
+      const top10 = bloopers.slice(0, 10);
+
+      const shareText = (() => {
+        if (top10.length === 0) return "";
+        let txt = "🤡 HALL OF SHAME · CM 2026\n\n";
+        top10.slice(0, 5).forEach((b, i) => {
+          txt += (i + 1) + ". " + b.player + ": a zis " + b.predicted + ", rezultat " + b.actual + " (" + b.match.e1 + " vs " + b.match.e2 + ")\n";
+        });
+        txt += "\n👉 vezi tot: https://vasileandrei88.github.io/Cupa-Mondiala-2026/";
+        return txt;
+      })();
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div>
+              <div className="font-bold text-rose-300">🤡 Hall of Shame · Cele mai proaste pronosticuri</div>
+              <div className="text-xs text-stone-400 mt-1">Top 10 cele mai mari rateuri din concurs. Pentru "claritate epistemologică" 😂</div>
+            </div>
+            {top10.length > 0 && <WhatsAppShareButton text={shareText} label="Distribuie HoS" small />}
+          </div>
+
+          {top10.length === 0 ? (
+            <div className="bg-stone-900/40 border border-stone-800 rounded-xl p-8 text-center">
+              <div className="text-4xl mb-3">🤷</div>
+              <h3 className="text-lg font-bold mb-2">Niciun rateu spectaculos încă</h3>
+              <p className="text-sm text-stone-400">Apare conținut aici după ce se joacă meciurile și se introduc rezultatele.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {top10.map((b, i) => (
+                <ShameCard key={i} blooper={b} rank={i + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ShameCard(props) {
+      const { blooper: b, rank } = props;
+      const c = groupColors[b.match.isKnockout ? b.match.g : b.match.g];
+      const matchLabel = b.match.isKnockout ? (b.match.phaseLabel + " · M" + b.match.n) : ("GR. " + b.match.g + " · M" + b.match.n);
+
+      // Comentarii amuzante bazate pe scor
+      let comment = "";
+      if (b.score >= 8) comment = "🤡 Catastrofă completă";
+      else if (b.score >= 6) comment = "🥴 Foarte departe de real";
+      else if (b.score >= 4) comment = "😬 Mare ratare";
+      else comment = "😐 Rateu";
+
+      const rankBg = rank === 1 ? "bg-rose-500" : rank === 2 ? "bg-orange-500" : rank === 3 ? "bg-amber-500" : "bg-stone-700";
+
+      return (
+        <div className="bg-stone-900/60 border border-rose-500/20 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className={"w-10 h-10 flex items-center justify-center rounded-md font-black shrink-0 " + rankBg + " text-stone-950"} style={{fontFamily:'"Bebas Neue", sans-serif', fontSize: 18}}>#{rank}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 text-xs flex-wrap">
+                <span className="font-black text-rose-300 text-base" style={{fontFamily:'"Bebas Neue", sans-serif'}}>{b.player.toUpperCase()}</span>
+                <span className="text-stone-500 font-mono text-[10px]">{matchLabel}</span>
+              </div>
+              <div className="text-sm text-stone-300 mb-2 truncate">
+                <span className="text-lg mr-1">{b.match.f1}</span>{b.match.e1} – {b.match.e2}<span className="text-lg ml-1">{b.match.f2}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs flex-wrap">
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded px-2 py-1">
+                  <span className="text-stone-500">a zis: </span>
+                  <span className="font-black text-rose-400 font-mono">{b.predicted}</span>
+                </div>
+                <div className="text-stone-600">→</div>
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded px-2 py-1">
+                  <span className="text-stone-500">real: </span>
+                  <span className="font-black text-emerald-400 font-mono">{b.actual}</span>
+                </div>
+                <div className="text-[10px] text-stone-500 ml-auto italic">{comment}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     function AdminView(props) {
       const [tab, setTab] = useState("results");
       return (
@@ -2174,13 +3033,142 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
           </div>
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["results", "🥅 REZULTATE"], ["knockout", "🏆 ELIMINATORII"], ["bonus", "⭐ BONUS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
+            {[["results", "🥅 REZULTATE"], ["knockout", "🏆 ELIMINATORII"], ["bonus", "⭐ BONUS"], ["sticky", "📌 MESAJ HOME"], ["snapshots", "📸 SNAPSHOTS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
           </div>
           {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} allKnockoutMatches={props.allKnockoutMatches} />}
           {tab === "knockout" && <AdminKnockoutPhases knockouts={props.knockouts} saveKnockoutPhase={props.saveKnockoutPhase} showToast={props.showToast} />}
           {tab === "bonus" && <AdminBonus bonusResults={props.bonusResults} saveBonusResults={props.saveBonusResults} showToast={props.showToast} />}
+          {tab === "sticky" && <AdminStickyNote stickyNote={props.stickyNote} saveStickyNote={props.saveStickyNote} showToast={props.showToast} />}
+          {tab === "snapshots" && <AdminSnapshots standings={props.standings} saveSnapshot={props.saveSnapshot} snapshots={props.snapshots} showToast={props.showToast} askConfirm={props.askConfirm} />}
           {tab === "settings" && <AdminSettings config={props.config} saveConfig={props.saveConfig} showToast={props.showToast} askConfirm={props.askConfirm} />}
           {tab === "players" && <AdminPlayers players={props.players} deletePlayer={props.deletePlayer} askConfirm={props.askConfirm} showToast={props.showToast} />}
+        </div>
+      );
+    }
+
+    // ========== ADMIN STICKY NOTE ==========
+    function AdminStickyNote(props) {
+      const { stickyNote, saveStickyNote, showToast } = props;
+      const [text, setText] = useState(stickyNote ? stickyNote.text : "");
+      const [active, setActive] = useState(stickyNote ? stickyNote.active : false);
+      const [dirty, setDirty] = useState(false);
+
+      useEffect(() => {
+        if (stickyNote) {
+          setText(stickyNote.text || "");
+          setActive(stickyNote.active || false);
+          setDirty(false);
+        }
+      }, [stickyNote]);
+
+      const save = async () => {
+        const ok = await saveStickyNote({ text: text.trim(), active });
+        if (ok) { setDirty(false); showToast(active ? "Mesaj activat pe homepage!" : "Mesaj salvat (inactiv)"); }
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+            <div className="font-bold text-yellow-300">📌 Mesaj fixat pe homepage</div>
+            <div className="text-xs text-stone-400 mt-1">Apare ca o postare galbenă în partea de sus a homepage-ului pentru toți utilizatorii.</div>
+          </div>
+
+          <div className="bg-stone-900/60 border border-stone-800 rounded-xl p-5 space-y-4">
+            <div>
+              <Label>TEXTUL MESAJULUI</Label>
+              <textarea value={text} onChange={(e) => { setText(e.target.value); setDirty(true); }} placeholder="ex: Băieți, mâine setez echipele Optimi 32! Verificați tab-ul nou de mâine seară." rows={4} style={{...inputStyleObj, resize: "vertical", minHeight: "100px", fontFamily: '"DM Sans", system-ui'}} />
+              <div className="text-[10px] text-stone-500 mt-1.5 font-mono">{text.length}/500 caractere</div>
+            </div>
+
+            <div className="flex items-center justify-between bg-stone-950/50 rounded-lg p-3 border border-stone-800">
+              <div>
+                <div className="font-bold text-sm">{active ? "🟢 Mesaj ACTIV pe homepage" : "🔴 Mesaj INACTIV"}</div>
+                <div className="text-xs text-stone-500 mt-1">{active ? "Toți jucătorii văd mesajul" : "Mesajul nu apare nicăieri"}</div>
+              </div>
+              <button type="button" onClick={() => { setActive(!active); setDirty(true); }} className={"w-14 h-8 rounded-full transition relative " + (active ? "bg-emerald-500" : "bg-stone-700")}>
+                <div className={"absolute top-1 w-6 h-6 bg-white rounded-full transition-all " + (active ? "left-7" : "left-1")}></div>
+              </button>
+            </div>
+
+            {/* Preview */}
+            {text.trim() && (
+              <div>
+                <div className="text-[10px] tracking-widest text-stone-500 font-mono mb-2">PREVIEW</div>
+                <div className="bg-yellow-400/15 border-2 border-yellow-400/50 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl shrink-0">📌</div>
+                    <div className="flex-1">
+                      <div className="text-xs tracking-[0.25em] text-yellow-300 font-mono mb-1">MESAJ DE LA ADMIN</div>
+                      <div className="text-stone-100 text-sm whitespace-pre-wrap">{text}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {dirty && (
+              <button type="button" onClick={save} className="w-full bg-amber-400 text-stone-950 px-6 py-3 rounded-lg font-black hover:bg-amber-300 transition" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>💾 SALVEAZĂ MESAJUL</button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ========== ADMIN SNAPSHOTS ==========
+    function AdminSnapshots(props) {
+      const { standings, saveSnapshot, snapshots, showToast, askConfirm } = props;
+
+      const saveCurrentSnapshot = () => {
+        const today = new Date();
+        const dateStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+        const existing = snapshots.find((s) => s.date === dateStr);
+
+        const doSave = async () => {
+          const lightStandings = standings.map((s) => ({ name: s.name, total: s.total, played: s.played }));
+          const ok = await saveSnapshot(dateStr, lightStandings);
+          if (ok) showToast("Snapshot salvat pentru " + dateStr + "!");
+        };
+
+        if (existing) {
+          askConfirm("SUPRASCRIE SNAPSHOT", "Există deja un snapshot pentru " + dateStr + ". Vrei să-l înlocuiești cu starea actuală a clasamentului?", doSave, false);
+        } else {
+          doSave();
+        }
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div>
+              <div className="font-bold text-cyan-300">📸 Snapshots clasament · {snapshots.length} salvate</div>
+              <div className="text-xs text-stone-400 mt-1">Salvează zilnic snapshot-ul ca să poți construi graficul Timeline din Analize.</div>
+            </div>
+            <button type="button" onClick={saveCurrentSnapshot} className="bg-cyan-500 text-white px-5 py-2.5 rounded-lg font-black hover:bg-cyan-400 transition" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>📸 SALVEAZĂ SNAPSHOT AZI</button>
+          </div>
+
+          {snapshots.length === 0 ? (
+            <div className="bg-stone-900/40 border border-stone-800 rounded-xl p-8 text-center">
+              <div className="text-3xl mb-2">📸</div>
+              <div className="text-stone-400 text-sm">Niciun snapshot salvat încă. Apasă butonul de mai sus.</div>
+            </div>
+          ) : (
+            <div className="bg-stone-900/60 border border-stone-800 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-stone-800 bg-stone-950/50 text-xs tracking-widest text-stone-500 font-mono">ISTORIC SNAPSHOTS</div>
+              <div className="divide-y divide-stone-800">
+                {[...snapshots].reverse().map((s) => (
+                  <div key={s.date} className="px-4 py-3">
+                    <div className="font-bold text-sm">📅 {s.date}</div>
+                    {s.standings && (
+                      <div className="text-xs text-stone-400 mt-1">
+                        Top 3: {s.standings.slice(0, 3).map((p) => p.name + " (" + p.total + "p)").join(" · ")}
+                      </div>
+                    )}
+                    {s.savedAt && <div className="text-[10px] text-stone-600 mt-1 font-mono">salvat la {new Date(s.savedAt).toLocaleString("ro-RO")}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
