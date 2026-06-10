@@ -273,12 +273,21 @@
 
     // Punctaje întrebări bonus (dublate față de original)
     const BONUS_POINTS = {
-      champion: 20,        // câștigător turneu
-      finalist: 10,        // finalistă învinsă
-      topScorer: 16,       // golgheter
-      surprise: 10,        // echipa surpriză (semifinalistă non-favorită)
-      mostGoalsAgainst: 6  // echipa cu cele mai multe goluri primite în grupe
+      champion: 20,         // câștigător turneu
+      finalist: 10,         // finalistă învinsă
+      topScorer: 16,        // golgheter
+      surprise: 10,         // echipa surpriză (semifinalistă non-favorită)
+      mostGoalsAgainst: 6,  // echipa cu cele mai multe goluri primite în grupe
+      colossusOut: 6,       // colos care nu iese din grupă
+      leastGoalsAgainst: 6, // echipa cu cele mai puține goluri primite în grupe
+      leastGoalsScored: 6   // echipa cu cele mai puține goluri marcate în grupe
     };
+
+    // Top 10 favorite la CM 2026 - pentru întrebarea "ce colos NU iese din grupă"
+    const TOP_10_FAVORITES = [
+      "Argentina", "Brazilia", "Franța", "Anglia", "Spania",
+      "Germania", "Portugalia", "Olanda", "Belgia", "Uruguay"
+    ];
 
     // ========== ACHIEVEMENT DEFINITIONS ==========
     // Fiecare achievement are: id, icon, title, desc, color, check(playerName, ctx) -> bool
@@ -483,7 +492,7 @@
         check: (playerName, ctx) => {
           const player = ctx.players.find((p) => p.name === playerName);
           if (!player || !player.bonus) return false;
-          const fields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"];
+          const fields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst", "colossusOut", "leastGoalsAgainst", "leastGoalsScored"];
           return fields.every((f) => player.bonus[f]);
         }
       },
@@ -590,22 +599,6 @@
           return player && player.bonus && player.bonus.topScorer && 
             player.bonus.topScorer.toLowerCase().trim() === ctx.bonusResults.topScorer.toLowerCase().trim();
         }
-      },
-      {
-        id: "comeback", icon: "📈", title: "COMEBACK KID",
-        desc: "Recuperează 5+ poziții pe parcurs (necesită istoric)",
-        color: "emerald",
-        check: (playerName, ctx) => {
-          if (!ctx.snapshots || ctx.snapshots.length < 2) return false;
-          // Verific dacă jucătorul a fost vreodată cu 5+ poziții mai jos decât acum
-          const currentRank = ctx.standings.findIndex((s) => s.name === playerName);
-          if (currentRank === -1) return false;
-          for (const snap of ctx.snapshots) {
-            const pastRank = snap.standings ? snap.standings.findIndex((s) => s.name === playerName) : -1;
-            if (pastRank !== -1 && pastRank - currentRank >= 5) return true;
-          }
-          return false;
-        }
       }
     ];
 
@@ -654,6 +647,18 @@
       if (bonusResults.mostGoalsAgainst && playerBonus.mostGoalsAgainst === bonusResults.mostGoalsAgainst) {
         breakdown.mostGoalsAgainst = BONUS_POINTS.mostGoalsAgainst;
         total += BONUS_POINTS.mostGoalsAgainst;
+      }
+      if (bonusResults.colossusOut && playerBonus.colossusOut === bonusResults.colossusOut) {
+        breakdown.colossusOut = BONUS_POINTS.colossusOut;
+        total += BONUS_POINTS.colossusOut;
+      }
+      if (bonusResults.leastGoalsAgainst && playerBonus.leastGoalsAgainst === bonusResults.leastGoalsAgainst) {
+        breakdown.leastGoalsAgainst = BONUS_POINTS.leastGoalsAgainst;
+        total += BONUS_POINTS.leastGoalsAgainst;
+      }
+      if (bonusResults.leastGoalsScored && playerBonus.leastGoalsScored === bonusResults.leastGoalsScored) {
+        breakdown.leastGoalsScored = BONUS_POINTS.leastGoalsScored;
+        total += BONUS_POINTS.leastGoalsScored;
       }
       return { total, breakdown };
     }
@@ -1363,14 +1368,17 @@
           <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/10 backdrop-blur border border-purple-500/20 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-2xl">⭐</span>
-              <div className="text-xs tracking-[0.25em] text-purple-300 font-mono">ÎNTREBĂRI BONUS · până la 62 puncte extra</div>
+              <div className="text-xs tracking-[0.25em] text-purple-300 font-mono">ÎNTREBĂRI BONUS · până la 80 puncte extra</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <BonusTile pts={BONUS_POINTS.champion} label="CÂȘTIGĂTORUL TURNEULUI" desc="Ghicești cine va lua Cupa" />
               <BonusTile pts={BONUS_POINTS.finalist} label="FINALISTA ÎNVINSĂ" desc="Echipa care pierde finala" />
               <BonusTile pts={BONUS_POINTS.topScorer} label="GOLGHETER" desc="Cel mai mare marcator al turneului" />
               <BonusTile pts={BONUS_POINTS.surprise} label="ECHIPA SURPRIZĂ" desc="Semifinalistă neașteptată" />
-              <BonusTile pts={BONUS_POINTS.mostGoalsAgainst} label="GOLURI PRIMITE" desc="Echipa cu cele mai multe goluri primite în grupe" />
+              <BonusTile pts={BONUS_POINTS.mostGoalsAgainst} label="GOLURI PRIMITE (MAX)" desc="Echipa cu cele mai multe goluri primite în grupe" />
+              <BonusTile pts={BONUS_POINTS.colossusOut} label="COLOSUL ELIMINAT" desc="Favoritul (top 10) care NU iese din grupe" />
+              <BonusTile pts={BONUS_POINTS.leastGoalsAgainst} label="GOLURI PRIMITE (MIN)" desc="Echipa cu cele mai puține goluri primite în grupe" />
+              <BonusTile pts={BONUS_POINTS.leastGoalsScored} label="GOLURI MARCATE (MIN)" desc="Echipa cu cele mai puține goluri marcate în grupe" />
             </div>
             <div className="text-xs text-purple-300/70 mt-4 font-mono">Răspunsurile se completează până la deadline. Evaluare la finalul turneului.</div>
           </div>
@@ -1566,7 +1574,7 @@
             <>
               <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 flex items-center gap-3">
                 <span className="text-2xl">⭐</span>
-                <div className="flex-1 text-sm">Nu uita să completezi și <span className="font-bold text-purple-300">întrebările bonus</span> pentru până la 62 puncte extra!</div>
+                <div className="flex-1 text-sm">Nu uita să completezi și <span className="font-bold text-purple-300">întrebările bonus</span> pentru până la 80 puncte extra!</div>
               </div>
               <div className="space-y-2">
                 <input type="search" placeholder="caută echipă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64 bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400" style={{fontSize:16}} />
@@ -1698,7 +1706,7 @@
           <div>
             <div className="text-xs tracking-[0.25em] text-purple-400 font-mono">⭐ ÎNTREBĂRI BONUS · {player.name.toUpperCase()}</div>
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>PARIAZĂ-ȚI <span className="text-purple-400">ȘANSELE</span></h2>
-            <p className="text-stone-400 mt-2 text-sm">{isLocked ? <span className="text-red-400">🔒 Răspunsurile sunt blocate.</span> : <>5 întrebări = până la <span className="font-bold text-purple-300">62 puncte bonus</span>. Salvare automată.</>}</p>
+            <p className="text-stone-400 mt-2 text-sm">{isLocked ? <span className="text-red-400">🔒 Răspunsurile sunt blocate.</span> : <>8 întrebări = până la <span className="font-bold text-purple-300">80 puncte bonus</span>. Salvare automată.</>}</p>
           </div>
 
           <BonusQuestion num={1} pts={BONUS_POINTS.champion} title="CÂȘTIGĂTORUL TURNEULUI" desc="Cine va lua trofeul Cupei Mondiale 2026?" status={fieldStatus("champion")} realAnswer={bonusResults.champion}>
@@ -1740,8 +1748,33 @@
             </select>
           </BonusQuestion>
 
-          <BonusQuestion num={5} pts={BONUS_POINTS.mostGoalsAgainst} title="GOLURI PRIMITE ÎN GRUPE" desc="Echipa cu cele mai multe goluri primite în faza grupelor" status={fieldStatus("mostGoalsAgainst")} realAnswer={bonusResults.mostGoalsAgainst}>
+          <BonusQuestion num={5} pts={BONUS_POINTS.mostGoalsAgainst} title="GOLURI PRIMITE ÎN GRUPE (MAX)" desc="Echipa cu cele mai multe goluri primite în faza grupelor" status={fieldStatus("mostGoalsAgainst")} realAnswer={bonusResults.mostGoalsAgainst}>
             <select value={bonus.mostGoalsAgainst || ""} onChange={(e) => updateBonus("mostGoalsAgainst", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+          </BonusQuestion>
+
+          <BonusQuestion num={6} pts={BONUS_POINTS.colossusOut} title="COLOSUL ELIMINAT" desc="Care din cele 10 favorite ale turneului NU se va califica din grupă (locul 3 sau 4)?" status={fieldStatus("colossusOut")} realAnswer={bonusResults.colossusOut}>
+            <select value={bonus.colossusOut || ""} onChange={(e) => updateBonus("colossusOut", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege favorita —</option>
+              {TOP_10_FAVORITES.map((teamName) => {
+                const team = TEAMS.find((t) => t.name === teamName);
+                return <option key={teamName} value={teamName}>{team ? team.flag : ""} {teamName}</option>;
+              })}
+            </select>
+            <div className="text-[11px] text-amber-300/70 mt-2">💡 Top 10 favorite: Argentina, Brazilia, Franța, Anglia, Spania, Germania, Portugalia, Olanda, Belgia, Uruguay</div>
+          </BonusQuestion>
+
+          <BonusQuestion num={7} pts={BONUS_POINTS.leastGoalsAgainst} title="GOLURI PRIMITE ÎN GRUPE (MIN)" desc="Echipa cu cele mai puține goluri primite în faza grupelor (cea mai bună defensivă)" status={fieldStatus("leastGoalsAgainst")} realAnswer={bonusResults.leastGoalsAgainst}>
+            <select value={bonus.leastGoalsAgainst || ""} onChange={(e) => updateBonus("leastGoalsAgainst", e.target.value)} disabled={isLocked} style={inputStyleObj}>
+              <option value="">— alege echipa —</option>
+              {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+            </select>
+          </BonusQuestion>
+
+          <BonusQuestion num={8} pts={BONUS_POINTS.leastGoalsScored} title="GOLURI MARCATE ÎN GRUPE (MIN)" desc="Echipa cu cele mai puține goluri marcate în faza grupelor (atac slab)" status={fieldStatus("leastGoalsScored")} realAnswer={bonusResults.leastGoalsScored}>
+            <select value={bonus.leastGoalsScored || ""} onChange={(e) => updateBonus("leastGoalsScored", e.target.value)} disabled={isLocked} style={inputStyleObj}>
               <option value="">— alege echipa —</option>
               {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
             </select>
@@ -1858,7 +1891,7 @@
     function PlayerDetail(props) {
       const { player, results, bonusResults, scoring, standing, knockoutMatches } = props;
       const bonus = player.bonus || {};
-      const hasBonusAnswered = bonus.champion || bonus.finalist || bonus.topScorer || bonus.surprise || bonus.mostGoalsAgainst;
+      const hasBonusAnswered = bonus.champion || bonus.finalist || bonus.topScorer || bonus.surprise || bonus.mostGoalsAgainst || bonus.colossusOut || bonus.leastGoalsAgainst || bonus.leastGoalsScored;
 
       const renderMatchRow = (m, isKnockout) => {
         const pred = player.predictions ? player.predictions[m.n] : null;
@@ -1890,6 +1923,9 @@
                 {bonus.topScorer && <BonusDetailRow label="⚽ Golgheter" answer={bonus.topScorer} pts={standing.bonusBreakdown.topScorer} maxPts={BONUS_POINTS.topScorer} realAnswer={bonusResults.topScorer} />}
                 {bonus.surprise && <BonusDetailRow label="✨ Echipa surpriză" answer={bonus.surprise} pts={standing.bonusBreakdown.surprise} maxPts={BONUS_POINTS.surprise} realAnswer={bonusResults.surprise} />}
                 {bonus.mostGoalsAgainst && <BonusDetailRow label="🥅 Cele mai multe goluri primite" answer={bonus.mostGoalsAgainst} pts={standing.bonusBreakdown.mostGoalsAgainst} maxPts={BONUS_POINTS.mostGoalsAgainst} realAnswer={bonusResults.mostGoalsAgainst} />}
+                {bonus.colossusOut && <BonusDetailRow label="💥 Colosul eliminat" answer={bonus.colossusOut} pts={standing.bonusBreakdown.colossusOut} maxPts={BONUS_POINTS.colossusOut} realAnswer={bonusResults.colossusOut} />}
+                {bonus.leastGoalsAgainst && <BonusDetailRow label="🛡️ Cele mai puține goluri primite" answer={bonus.leastGoalsAgainst} pts={standing.bonusBreakdown.leastGoalsAgainst} maxPts={BONUS_POINTS.leastGoalsAgainst} realAnswer={bonusResults.leastGoalsAgainst} />}
+                {bonus.leastGoalsScored && <BonusDetailRow label="🚫 Cele mai puține goluri marcate" answer={bonus.leastGoalsScored} pts={standing.bonusBreakdown.leastGoalsScored} maxPts={BONUS_POINTS.leastGoalsScored} realAnswer={bonusResults.leastGoalsScored} />}
               </div>
             </div>
           )}
@@ -1951,7 +1987,6 @@
               ["bonus", "⭐ BONUS"],
               ["facts", "🎲 FUN FACTS"],
               ["achievements", "🏅 TROFEE"],
-              ["timeline", "📈 TIMELINE"],
               ["shame", "🤡 HALL OF SHAME"],
               ["battle", "⚔️ BATTLE"]
             ].map((arr) => (
@@ -1963,7 +1998,6 @@
           {tab === "bonus" && <AnalyticsBonus players={players} bonusResults={bonusResults} />}
           {tab === "facts" && <AnalyticsFunFacts players={players} results={results} bonusResults={bonusResults} scoring={scoring} allKnockoutMatches={allKnockoutMatches} standings={standings} />}
           {tab === "achievements" && <AnalyticsAchievements players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} standings={standings} bonusResults={bonusResults} snapshots={snapshots} />}
-          {tab === "timeline" && <AnalyticsTimeline players={players} snapshots={snapshots} standings={standings} />}
           {tab === "shame" && <AnalyticsHallOfShame players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
           {tab === "battle" && <AnalyticsBattle players={players} results={results} scoring={scoring} allKnockoutMatches={allKnockoutMatches} />}
         </div>
@@ -2173,7 +2207,10 @@
         { field: "finalist", icon: "🥈", title: "FINALISTĂ ÎNVINSĂ", pts: BONUS_POINTS.finalist, desc: "Cine pierde finala?" },
         { field: "topScorer", icon: "⚽", title: "GOLGHETER", pts: BONUS_POINTS.topScorer, desc: "Cel mai bun marcator" },
         { field: "surprise", icon: "✨", title: "ECHIPA SURPRIZĂ", pts: BONUS_POINTS.surprise, desc: "Semifinalistă non-favorită" },
-        { field: "mostGoalsAgainst", icon: "🥅", title: "GOLURI PRIMITE", pts: BONUS_POINTS.mostGoalsAgainst, desc: "Cele mai multe în grupe" }
+        { field: "mostGoalsAgainst", icon: "🥅", title: "GOLURI PRIMITE (MAX)", pts: BONUS_POINTS.mostGoalsAgainst, desc: "Cele mai multe în grupe" },
+        { field: "colossusOut", icon: "💥", title: "COLOSUL ELIMINAT", pts: BONUS_POINTS.colossusOut, desc: "Favorit care NU iese din grupă" },
+        { field: "leastGoalsAgainst", icon: "🛡️", title: "GOLURI PRIMITE (MIN)", pts: BONUS_POINTS.leastGoalsAgainst, desc: "Cele mai puține în grupe" },
+        { field: "leastGoalsScored", icon: "🚫", title: "GOLURI MARCATE (MIN)", pts: BONUS_POINTS.leastGoalsScored, desc: "Atac slab în grupe" }
       ];
 
       return (
@@ -3033,13 +3070,12 @@
             <h2 className="text-3xl sm:text-4xl font-black mt-1" style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.02em"}}>CONTROL <span className="text-red-400">TOTAL</span></h2>
           </div>
           <div className="flex gap-1 border-b border-stone-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {[["results", "🥅 REZULTATE"], ["knockout", "🏆 ELIMINATORII"], ["bonus", "⭐ BONUS"], ["sticky", "📌 MESAJ HOME"], ["snapshots", "📸 SNAPSHOTS"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
+            {[["results", "🥅 REZULTATE"], ["knockout", "🏆 ELIMINATORII"], ["bonus", "⭐ BONUS"], ["sticky", "📌 MESAJ HOME"], ["settings", "⚙️ SETĂRI"], ["players", "👥 JUCĂTORI"]].map((arr) => <button type="button" key={arr[0]} onClick={() => setTab(arr[0])} className={"px-4 py-3 text-xs font-bold tracking-widest transition whitespace-nowrap " + (tab===arr[0] ? "border-b-2 border-amber-400 text-amber-400" : "text-stone-500 hover:text-stone-300")} style={{fontFamily:'"Bebas Neue", sans-serif', letterSpacing:"0.15em"}}>{arr[1]}</button>)}
           </div>
           {tab === "results" && <AdminResults results={props.results} saveResults={props.saveResults} showToast={props.showToast} allKnockoutMatches={props.allKnockoutMatches} />}
           {tab === "knockout" && <AdminKnockoutPhases knockouts={props.knockouts} saveKnockoutPhase={props.saveKnockoutPhase} showToast={props.showToast} />}
           {tab === "bonus" && <AdminBonus bonusResults={props.bonusResults} saveBonusResults={props.saveBonusResults} showToast={props.showToast} />}
           {tab === "sticky" && <AdminStickyNote stickyNote={props.stickyNote} saveStickyNote={props.saveStickyNote} showToast={props.showToast} />}
-          {tab === "snapshots" && <AdminSnapshots standings={props.standings} saveSnapshot={props.saveSnapshot} snapshots={props.snapshots} showToast={props.showToast} askConfirm={props.askConfirm} />}
           {tab === "settings" && <AdminSettings config={props.config} saveConfig={props.saveConfig} showToast={props.showToast} askConfirm={props.askConfirm} />}
           {tab === "players" && <AdminPlayers players={props.players} deletePlayer={props.deletePlayer} askConfirm={props.askConfirm} showToast={props.showToast} />}
         </div>
@@ -3366,7 +3402,7 @@
       const update = (field, value) => { setPending((p) => ({ ...p, [field]: value })); setDirty(true); };
       const save = async () => {
         const clean = {};
-        for (const k of ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"]) {
+        for (const k of ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst", "colossusOut", "leastGoalsAgainst", "leastGoalsScored"]) {
           if (pending[k]) clean[k] = pending[k];
         }
         const ok = await saveBonusResults(clean);
@@ -3406,8 +3442,33 @@
               </select>
             </AdminBonusField>
 
-            <AdminBonusField label="🥅 Goluri primite în grupe" pts={BONUS_POINTS.mostGoalsAgainst}>
+            <AdminBonusField label="🥅 Goluri primite în grupe (MAX)" pts={BONUS_POINTS.mostGoalsAgainst}>
               <select value={pending.mostGoalsAgainst || ""} onChange={(e) => update("mostGoalsAgainst", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+
+            <AdminBonusField label="💥 Colosul eliminat" pts={BONUS_POINTS.colossusOut}>
+              <select value={pending.colossusOut || ""} onChange={(e) => update("colossusOut", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TOP_10_FAVORITES.map((teamName) => {
+                  const team = TEAMS.find((t) => t.name === teamName);
+                  return <option key={teamName} value={teamName}>{team ? team.flag : ""} {teamName}</option>;
+                })}
+              </select>
+              <div className="text-[10px] text-stone-500 mt-1.5 font-mono">Doar top 10 favorite</div>
+            </AdminBonusField>
+
+            <AdminBonusField label="🛡️ Goluri primite în grupe (MIN)" pts={BONUS_POINTS.leastGoalsAgainst}>
+              <select value={pending.leastGoalsAgainst || ""} onChange={(e) => update("leastGoalsAgainst", e.target.value)} style={inputStyleObj}>
+                <option value="">— nu s-a stabilit încă —</option>
+                {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
+              </select>
+            </AdminBonusField>
+
+            <AdminBonusField label="🚫 Goluri marcate în grupe (MIN)" pts={BONUS_POINTS.leastGoalsScored}>
+              <select value={pending.leastGoalsScored || ""} onChange={(e) => update("leastGoalsScored", e.target.value)} style={inputStyleObj}>
                 <option value="">— nu s-a stabilit încă —</option>
                 {TEAMS.map((t) => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
               </select>
@@ -3586,11 +3647,11 @@
           {players.length === 0 ? <div className="p-8 text-center text-stone-500">Niciun jucător încă.</div>
           : players.map((p) => {
             const completed = MATCHES.filter((m) => p.predictions && p.predictions[m.n] && p.predictions[m.n].g1 !== "" && p.predictions[m.n].g2 !== "" && p.predictions[m.n].g1 != null && p.predictions[m.n].g2 != null).length;
-            const bonusFields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst"];
+            const bonusFields = ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst", "colossusOut", "leastGoalsAgainst", "leastGoalsScored"];
             const bonusFilled = p.bonus ? bonusFields.filter((f) => p.bonus[f]).length : 0;
             return (
               <div key={p.name} className="px-4 py-3 border-b border-stone-800 last:border-0 flex items-center justify-between gap-4">
-                <div><div className="font-bold">{p.name}</div><div className="text-xs text-stone-500 font-mono">{completed}/72 meciuri · {bonusFilled}/5 bonus</div></div>
+                <div><div className="font-bold">{p.name}</div><div className="text-xs text-stone-500 font-mono">{completed}/72 meciuri · {bonusFilled}/8 bonus</div></div>
                 <button type="button" onClick={() => remove(p.name)} className="text-red-400 hover:text-red-300 p-2 rounded hover:bg-red-500/10" title="Șterge">🗑</button>
               </div>
             );
