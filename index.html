@@ -1447,7 +1447,7 @@ const ACHIEVEMENTS = [{
   check: (playerName, ctx) => {
     if (!ctx.bonusResults.topScorer) return false;
     const player = ctx.players.find(p => p.name === playerName);
-    return player && player.bonus && player.bonus.topScorer && player.bonus.topScorer.toLowerCase().trim() === ctx.bonusResults.topScorer.toLowerCase().trim();
+    return player && player.bonus && isBonusAnswerCorrect(player.bonus.topScorer, ctx.bonusResults.topScorer, true);
   }
 }];
 function getPlayerAchievements(playerName, players, results, scoring, allKnockoutMatches, standings, bonusResults, snapshots) {
@@ -1470,6 +1470,14 @@ function getPlayerAchievements(playerName, players, results, scoring, allKnockou
     }
   });
 }
+function isMatchStarted(m) {
+  if (!m || !m.d || !m.t) return false;
+  const parts = m.d.split(".");
+  if (parts.length < 2) return false;
+  const startDate = new Date("2026-" + parts[1] + "-" + parts[0] + "T" + m.t + ":00");
+  if (isNaN(startDate.getTime())) return false;
+  return new Date() >= startDate;
+}
 function calcPoints(pred, real, scoring) {
   if (!pred || pred.g1 === "" || pred.g2 === "" || pred.g1 == null || pred.g2 == null) return null;
   if (!real || real.g1 === "" || real.g2 === "" || real.g1 == null || real.g2 == null) return null;
@@ -1483,6 +1491,26 @@ function calcPoints(pred, real, scoring) {
     rs = Math.sign(rg1 - rg2);
   if (ps === rs) return scoring.outcome;
   return scoring.wrong;
+}
+const MULTI_ANSWER_BONUS_FIELDS = ["topScorer", "surprise", "mostGoalsAgainst", "colossusOut", "leastGoalsAgainst", "leastGoalsScored"];
+function bonusResultToArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.filter(x => x);
+  return [val];
+}
+function isBonusAnswerCorrect(playerAnswer, correctVal, caseInsensitive) {
+  if (!playerAnswer || !correctVal) return false;
+  const correctArr = bonusResultToArray(correctVal);
+  if (caseInsensitive) {
+    const pa = playerAnswer.toLowerCase().trim();
+    return correctArr.some(c => c.toLowerCase().trim() === pa);
+  }
+  return correctArr.includes(playerAnswer);
+}
+function formatBonusAnswer(val) {
+  const arr = bonusResultToArray(val);
+  if (arr.length === 0) return "";
+  return arr.join(" / ");
 }
 function calcBonusPoints(playerBonus, bonusResults) {
   if (!playerBonus || !bonusResults) return {
@@ -1499,29 +1527,12 @@ function calcBonusPoints(playerBonus, bonusResults) {
     breakdown.finalist = BONUS_POINTS.finalist;
     total += BONUS_POINTS.finalist;
   }
-  if (bonusResults.topScorer && playerBonus.topScorer && bonusResults.topScorer.toLowerCase().trim() === playerBonus.topScorer.toLowerCase().trim()) {
-    breakdown.topScorer = BONUS_POINTS.topScorer;
-    total += BONUS_POINTS.topScorer;
-  }
-  if (bonusResults.surprise && playerBonus.surprise === bonusResults.surprise) {
-    breakdown.surprise = BONUS_POINTS.surprise;
-    total += BONUS_POINTS.surprise;
-  }
-  if (bonusResults.mostGoalsAgainst && playerBonus.mostGoalsAgainst === bonusResults.mostGoalsAgainst) {
-    breakdown.mostGoalsAgainst = BONUS_POINTS.mostGoalsAgainst;
-    total += BONUS_POINTS.mostGoalsAgainst;
-  }
-  if (bonusResults.colossusOut && playerBonus.colossusOut === bonusResults.colossusOut) {
-    breakdown.colossusOut = BONUS_POINTS.colossusOut;
-    total += BONUS_POINTS.colossusOut;
-  }
-  if (bonusResults.leastGoalsAgainst && playerBonus.leastGoalsAgainst === bonusResults.leastGoalsAgainst) {
-    breakdown.leastGoalsAgainst = BONUS_POINTS.leastGoalsAgainst;
-    total += BONUS_POINTS.leastGoalsAgainst;
-  }
-  if (bonusResults.leastGoalsScored && playerBonus.leastGoalsScored === bonusResults.leastGoalsScored) {
-    breakdown.leastGoalsScored = BONUS_POINTS.leastGoalsScored;
-    total += BONUS_POINTS.leastGoalsScored;
+  for (const field of MULTI_ANSWER_BONUS_FIELDS) {
+    const caseInsensitive = field === "topScorer";
+    if (bonusResults[field] && isBonusAnswerCorrect(playerBonus[field], bonusResults[field], caseInsensitive)) {
+      breakdown[field] = BONUS_POINTS[field];
+      total += BONUS_POINTS[field];
+    }
   }
   return {
     total,
@@ -1969,11 +1980,16 @@ function App() {
     }
     return result;
   }, [knockoutMatches]);
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
   const isLocked = useMemo(() => {
     if (!config.deadline) return false;
     const d = new Date(config.deadline);
     return !isNaN(d.getTime()) && new Date() >= d;
-  }, [config.deadline]);
+  }, [config.deadline, nowTick]);
   const standings = useMemo(() => {
     const arr = players.map(p => {
       let matchTotal = 0,
@@ -3249,6 +3265,17 @@ function PredictView(props) {
   }).length;
   const updatePred = (matchN, field, value) => {
     if (isLocked) return;
+    let matchObj = MATCHES.find(mm => mm.n === matchN);
+    if (!matchObj) {
+      for (const pk of PHASES_ORDER) {
+        const found = (knockoutMatches[pk] || []).find(mm => mm.n === matchN);
+        if (found) {
+          matchObj = found;
+          break;
+        }
+      }
+    }
+    if (matchObj && isMatchStarted(matchObj)) return;
     const v = value === "" ? "" : Math.max(0, Math.min(15, parseInt(value) || 0));
     const newPreds = {
       ...(player.predictions || {})
@@ -3505,13 +3532,15 @@ function MatchCard(props) {
     pred,
     real,
     scoring,
-    isLocked,
+    isLocked: isLockedProp,
     onUpdate
   } = props;
   const c = groupColors[m.g];
   const points = calcPoints(pred, real, scoring);
   const hasResult = real && real.g1 !== "" && real.g2 !== "" && real.g1 != null && real.g2 != null;
   const isKnockout = m.isKnockout;
+  const started = isMatchStarted(m);
+  const isLocked = isLockedProp || started;
   let pointBadge = null;
   if (points != null) {
     let bg = "bg-stone-700 text-stone-300";
@@ -3595,7 +3624,9 @@ function MatchCard(props) {
       border: inputBorder,
       WebkitAppearance: "none"
     }
-  }))), isKnockout && !hasResult && React.createElement("div", {
+  }))), started && !isLockedProp && !hasResult && React.createElement("div", {
+    className: "mt-3 pt-2 border-t border-stone-800 text-[10px] text-red-400 font-mono tracking-widest"
+  }, "🔒 MECI ÎNCEPUT · pronostic blocat"), isKnockout && !hasResult && React.createElement("div", {
     className: "mt-3 pt-2 border-t border-stone-800 text-[10px] text-stone-500 italic"
   }, "Scor după 90/120 min (fără penaltyuri)"), hasResult && React.createElement("div", {
     className: "mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs"
@@ -3637,12 +3668,8 @@ function BonusView(props) {
   const finalistOptions = bonus.champion ? TEAMS.filter(t => t.name !== bonus.champion) : TEAMS;
   const fieldStatus = field => {
     if (!bonusResults[field]) return null;
-    if (field === "topScorer") {
-      const userVal = (bonus[field] || "").toLowerCase().trim();
-      const realVal = bonusResults[field].toLowerCase().trim();
-      return userVal === realVal ? "win" : "lose";
-    }
-    return bonus[field] === bonusResults[field] ? "win" : "lose";
+    const caseInsensitive = field === "topScorer";
+    return isBonusAnswerCorrect(bonus[field], bonusResults[field], caseInsensitive) ? "win" : "lose";
   };
   return React.createElement("div", {
     className: "space-y-6"
@@ -3876,9 +3903,9 @@ function BonusQuestion(props) {
     className: "mt-3 pt-3 border-t border-stone-800 flex items-center justify-between text-xs"
   }, React.createElement("div", null, React.createElement("span", {
     className: "text-stone-500 font-mono tracking-widest text-[10px] mr-2"
-  }, "RĂSPUNS CORECT:"), React.createElement("span", {
+  }, bonusResultToArray(realAnswer).length > 1 ? "RĂSPUNSURI CORECTE:" : "RĂSPUNS CORECT:"), React.createElement("span", {
     className: "font-bold text-emerald-400"
-  }, realAnswer)), status === "win" && React.createElement("span", {
+  }, formatBonusAnswer(realAnswer))), status === "win" && React.createElement("span", {
     className: "bg-emerald-500 text-stone-950 px-2 py-1 rounded font-black",
     style: {
       fontFamily: '"Bebas Neue", sans-serif'
@@ -4201,9 +4228,9 @@ function BonusDetailRow(props) {
     className: "text-purple-300 font-bold text-[10px]"
   }, maxPts, " pct")), React.createElement("div", {
     className: "font-bold text-stone-200 text-[11px] truncate"
-  }, answer), realAnswer && realAnswer !== answer && React.createElement("div", {
+  }, answer), realAnswer && !won && React.createElement("div", {
     className: "text-[10px] text-emerald-400 mt-0.5 truncate"
-  }, "→ corect: ", realAnswer));
+  }, "→ corect: ", formatBonusAnswer(realAnswer)));
 }
 function AnalyticsView(props) {
   const {
@@ -4629,15 +4656,15 @@ function AnalyticsBonus(props) {
       className: "text-right shrink-0"
     }, React.createElement("div", {
       className: "text-[10px] text-stone-500 font-mono tracking-widest"
-    }, "RĂSPUNS CORECT"), React.createElement("div", {
+    }, bonusResultToArray(realAnswer).length > 1 ? "RĂSPUNSURI CORECTE" : "RĂSPUNS CORECT"), React.createElement("div", {
       className: "text-emerald-400 font-bold text-sm"
-    }, realAnswer))), groups.length === 0 ? React.createElement("div", {
+    }, formatBonusAnswer(realAnswer)))), groups.length === 0 ? React.createElement("div", {
       className: "text-center py-4 text-xs text-stone-500 italic"
     }, "Nimeni nu a răspuns încă.") : React.createElement("div", {
       className: "space-y-2"
     }, groups.map(g => {
       const widthPct = Math.round(g.players.length / players.length * 100);
-      const isCorrect = realAnswer && g.answer.toLowerCase().trim() === realAnswer.toLowerCase().trim();
+      const isCorrect = isBonusAnswerCorrect(g.answer, realAnswer, true);
       return React.createElement("div", {
         key: g.answer,
         className: "space-y-1"
@@ -6231,10 +6258,28 @@ function AdminBonus(props) {
     }));
     setDirty(true);
   };
+  const toggleMulti = (field, teamName) => {
+    setPending(p => {
+      const current = Array.isArray(p[field]) ? p[field] : p[field] ? [p[field]] : [];
+      const exists = current.includes(teamName);
+      const next = exists ? current.filter(t => t !== teamName) : [...current, teamName];
+      return {
+        ...p,
+        [field]: next
+      };
+    });
+    setDirty(true);
+  };
   const save = async () => {
     const clean = {};
     for (const k of ["champion", "finalist", "topScorer", "surprise", "mostGoalsAgainst", "colossusOut", "leastGoalsAgainst", "leastGoalsScored"]) {
-      if (pending[k]) clean[k] = pending[k];
+      const v = pending[k];
+      if (Array.isArray(v)) {
+        const filtered = v.filter(x => x);
+        if (filtered.length > 0) clean[k] = filtered;
+      } else if (v) {
+        clean[k] = v;
+      }
     }
     const ok = await saveBonusResults(clean);
     if (ok) {
@@ -6279,79 +6324,50 @@ function AdminBonus(props) {
   }, t.flag, " ", t.name)))), React.createElement(AdminBonusField, {
     label: "⚽ Golgheter turneu",
     pts: BONUS_POINTS.topScorer
-  }, React.createElement("input", {
-    value: pending.topScorer || "",
-    onChange: e => update("topScorer", e.target.value),
-    placeholder: "ex: Kylian Mbappé (Franța)",
-    style: inputStyleObj
+  }, React.createElement(AdminMultiTextInput, {
+    value: pending.topScorer,
+    onChange: arr => update("topScorer", arr),
+    placeholder: "ex: Kylian Mbappé (Franța)"
   }), React.createElement("div", {
     className: "text-[10px] text-stone-500 mt-1.5 font-mono"
-  }, "Match case-insensitive. Folosește exact formatul din listă pentru a match-ui cu jucătorii.")), React.createElement(AdminBonusField, {
+  }, "Potrivire fără diferență majuscule/minuscule. Poți adăuga mai mulți golgheteri dacă au marcat egal (ex. Mbappé și Messi la CM 2022). Jucătorul ia punctele dacă a nimerit pe oricare.")), React.createElement(AdminBonusField, {
     label: "✨ Echipa surpriză",
     pts: BONUS_POINTS.surprise
-  }, React.createElement("select", {
-    value: pending.surprise || "",
-    onChange: e => update("surprise", e.target.value),
-    style: inputStyleObj
-  }, React.createElement("option", {
-    value: ""
-  }, "— nu s-a stabilit încă —"), TEAMS.filter(t => !FAVORITE_TEAMS.includes(t.name)).map(t => React.createElement("option", {
-    key: t.name,
-    value: t.name
-  }, t.flag, " ", t.name)))), React.createElement(AdminBonusField, {
+  }, React.createElement(AdminMultiTeamSelect, {
+    teams: TEAMS.filter(t => !FAVORITE_TEAMS.includes(t.name)),
+    selected: pending.surprise,
+    onToggle: name => toggleMulti("surprise", name)
+  })), React.createElement(AdminBonusField, {
     label: "🥅 Goluri primite în grupe (MAX)",
     pts: BONUS_POINTS.mostGoalsAgainst
-  }, React.createElement("select", {
-    value: pending.mostGoalsAgainst || "",
-    onChange: e => update("mostGoalsAgainst", e.target.value),
-    style: inputStyleObj
-  }, React.createElement("option", {
-    value: ""
-  }, "— nu s-a stabilit încă —"), TEAMS.map(t => React.createElement("option", {
-    key: t.name,
-    value: t.name
-  }, t.flag, " ", t.name)))), React.createElement(AdminBonusField, {
+  }, React.createElement(AdminMultiTeamSelect, {
+    teams: TEAMS,
+    selected: pending.mostGoalsAgainst,
+    onToggle: name => toggleMulti("mostGoalsAgainst", name)
+  })), React.createElement(AdminBonusField, {
     label: "💥 Colosul eliminat",
     pts: BONUS_POINTS.colossusOut
-  }, React.createElement("select", {
-    value: pending.colossusOut || "",
-    onChange: e => update("colossusOut", e.target.value),
-    style: inputStyleObj
-  }, React.createElement("option", {
-    value: ""
-  }, "— nu s-a stabilit încă —"), TOP_10_FAVORITES.map(teamName => {
-    const team = TEAMS.find(t => t.name === teamName);
-    return React.createElement("option", {
-      key: teamName,
-      value: teamName
-    }, team ? team.flag : "", " ", teamName);
-  })), React.createElement("div", {
+  }, React.createElement(AdminMultiTeamSelect, {
+    teams: TOP_10_FAVORITES.map(tn => TEAMS.find(t => t.name === tn)).filter(Boolean),
+    selected: pending.colossusOut,
+    onToggle: name => toggleMulti("colossusOut", name)
+  }), React.createElement("div", {
     className: "text-[10px] text-stone-500 mt-1.5 font-mono"
   }, "Doar top 10 favorite")), React.createElement(AdminBonusField, {
     label: "🛡️ Goluri primite în grupe (MIN)",
     pts: BONUS_POINTS.leastGoalsAgainst
-  }, React.createElement("select", {
-    value: pending.leastGoalsAgainst || "",
-    onChange: e => update("leastGoalsAgainst", e.target.value),
-    style: inputStyleObj
-  }, React.createElement("option", {
-    value: ""
-  }, "— nu s-a stabilit încă —"), TEAMS.map(t => React.createElement("option", {
-    key: t.name,
-    value: t.name
-  }, t.flag, " ", t.name)))), React.createElement(AdminBonusField, {
+  }, React.createElement(AdminMultiTeamSelect, {
+    teams: TEAMS,
+    selected: pending.leastGoalsAgainst,
+    onToggle: name => toggleMulti("leastGoalsAgainst", name)
+  })), React.createElement(AdminBonusField, {
     label: "🚫 Goluri marcate în grupe (MIN)",
     pts: BONUS_POINTS.leastGoalsScored
-  }, React.createElement("select", {
-    value: pending.leastGoalsScored || "",
-    onChange: e => update("leastGoalsScored", e.target.value),
-    style: inputStyleObj
-  }, React.createElement("option", {
-    value: ""
-  }, "— nu s-a stabilit încă —"), TEAMS.map(t => React.createElement("option", {
-    key: t.name,
-    value: t.name
-  }, t.flag, " ", t.name))))), dirty && React.createElement("div", {
+  }, React.createElement(AdminMultiTeamSelect, {
+    teams: TEAMS,
+    selected: pending.leastGoalsScored,
+    onToggle: name => toggleMulti("leastGoalsScored", name)
+  }))), dirty && React.createElement("div", {
     className: "sticky bottom-4 flex justify-end"
   }, React.createElement("button", {
     type: "button",
@@ -6362,6 +6378,95 @@ function AdminBonus(props) {
       letterSpacing: "0.2em"
     }
   }, "💾 SALVEAZĂ BONUS")));
+}
+function AdminMultiTextInput(props) {
+  const {
+    value,
+    onChange,
+    placeholder
+  } = props;
+  const arr = Array.isArray(value) ? value : value ? [value] : [];
+  const [draft, setDraft] = useState("");
+  const addOne = () => {
+    const v = draft.trim();
+    if (!v) return;
+    if (arr.some(x => x.toLowerCase().trim() === v.toLowerCase().trim())) {
+      setDraft("");
+      return;
+    }
+    onChange([...arr, v]);
+    setDraft("");
+  };
+  const removeOne = name => onChange(arr.filter(x => x !== name));
+  return React.createElement("div", null, React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("input", {
+    value: draft,
+    onChange: e => setDraft(e.target.value),
+    onKeyDown: e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addOne();
+      }
+    },
+    placeholder: placeholder,
+    style: inputStyleObj
+  }), React.createElement("button", {
+    type: "button",
+    onClick: addOne,
+    className: "shrink-0 px-4 rounded-lg bg-emerald-500 text-stone-950 font-black hover:bg-emerald-400 transition",
+    style: {
+      fontFamily: '"Bebas Neue", sans-serif',
+      letterSpacing: "0.1em"
+    }
+  }, "+ ADAUGĂ")), arr.length > 0 && React.createElement("div", {
+    className: "flex flex-wrap gap-2 mt-2"
+  }, arr.map(name => React.createElement("div", {
+    key: name,
+    className: "flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/40 rounded-md px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "text-xs font-bold text-emerald-200"
+  }, name), React.createElement("button", {
+    type: "button",
+    onClick: () => removeOne(name),
+    className: "text-emerald-400/70 hover:text-red-400 text-xs font-black",
+    title: "Șterge"
+  }, "✕")))), arr.length > 1 && React.createElement("div", {
+    className: "text-[10px] text-amber-300 mt-1.5 font-mono"
+  }, "⚖️ egalitate — toți ", arr.length, " sunt corecți"));
+}
+function AdminMultiTeamSelect(props) {
+  const {
+    teams,
+    selected,
+    onToggle
+  } = props;
+  const selectedArr = Array.isArray(selected) ? selected : selected ? [selected] : [];
+  return React.createElement("div", null, React.createElement("div", {
+    className: "flex items-center justify-between mb-2"
+  }, React.createElement("div", {
+    className: "text-[11px] text-stone-400 font-mono"
+  }, selectedArr.length === 0 ? "Nicio echipă marcată" : selectedArr.length + (selectedArr.length === 1 ? " echipă marcată" : " echipe marcate (egalitate)")), selectedArr.length > 1 && React.createElement("div", {
+    className: "text-[10px] text-amber-300 font-mono"
+  }, "⚖️ egalitate — toate corecte")), React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-64 overflow-y-auto p-1 bg-stone-950/40 rounded-lg border border-stone-800"
+  }, teams.map(t => {
+    const isSel = selectedArr.includes(t.name);
+    return React.createElement("button", {
+      type: "button",
+      key: t.name,
+      onClick: () => onToggle(t.name),
+      className: "flex items-center gap-1.5 px-2 py-2 rounded-md text-xs font-bold text-left transition " + (isSel ? "bg-emerald-500 text-stone-950" : "bg-stone-800/60 text-stone-300 hover:bg-stone-700")
+    }, React.createElement("span", {
+      className: "shrink-0"
+    }, isSel ? "✓" : ""), React.createElement("span", {
+      className: "text-base shrink-0"
+    }, t.flag), React.createElement("span", {
+      className: "truncate"
+    }, t.name));
+  })), selectedArr.length > 0 && React.createElement("div", {
+    className: "text-[10px] text-emerald-300/80 mt-2 font-mono"
+  }, "Marcate: ", selectedArr.join(", ")));
 }
 function AdminBonusField(props) {
   return React.createElement("div", {
