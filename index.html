@@ -2493,8 +2493,10 @@ function ScoringInput(props) {
   }, React.createElement("div", {
     className: "text-[10px] text-stone-400 font-bold tracking-widest mb-1"
   }, label), React.createElement("input", {
-    type: "number",
+    type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    autoComplete: "off",
     min: "0",
     max: "20",
     value: value,
@@ -3587,8 +3589,10 @@ function MatchCard(props) {
   }, m.f1), React.createElement("span", {
     className: "font-bold text-sm flex-1 min-w-0 truncate"
   }, m.e1), React.createElement("input", {
-    type: "number",
+    type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    autoComplete: "off",
     min: "0",
     max: "15",
     value: pred ? pred.g1 != null ? pred.g1 : "" : "",
@@ -3610,8 +3614,10 @@ function MatchCard(props) {
   }, m.f2), React.createElement("span", {
     className: "font-bold text-sm flex-1 min-w-0 truncate"
   }, m.e2), React.createElement("input", {
-    type: "number",
+    type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    autoComplete: "off",
     min: "0",
     max: "15",
     value: pred ? pred.g2 != null ? pred.g2 : "" : "",
@@ -6187,8 +6193,10 @@ function AdminResults(props) {
     }, m.f1), React.createElement("span", {
       className: "font-bold text-sm flex-1 min-w-0 truncate"
     }, m.e1), React.createElement("input", {
-      type: "number",
+      type: "text",
       inputMode: "numeric",
+      pattern: "[0-9]*",
+      autoComplete: "off",
       min: "0",
       max: "15",
       value: r && r.g1 != null ? r.g1 : "",
@@ -6209,8 +6217,10 @@ function AdminResults(props) {
     }, m.f2), React.createElement("span", {
       className: "font-bold text-sm flex-1 min-w-0 truncate"
     }, m.e2), React.createElement("input", {
-      type: "number",
+      type: "text",
       inputMode: "numeric",
+      pattern: "[0-9]*",
+      autoComplete: "off",
       min: "0",
       max: "15",
       value: r && r.g2 != null ? r.g2 : "",
@@ -6709,8 +6719,10 @@ function SettingsRow(props) {
   }, props.label), React.createElement("div", {
     className: "text-[11px] text-stone-500 font-mono"
   }, props.desc)), React.createElement("input", {
-    type: "number",
+    type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    autoComplete: "off",
     min: "0",
     max: "20",
     value: props.value,
