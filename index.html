@@ -3264,17 +3264,19 @@ function PredictView(props) {
     return p && p.g1 !== "" && p.g2 !== "" && p.g1 != null && p.g2 != null;
   }).length;
   const updatePred = (matchN, field, value) => {
-    if (isLocked) return;
     let matchObj = MATCHES.find(mm => mm.n === matchN);
+    let isKnockoutMatch = false;
     if (!matchObj) {
       for (const pk of PHASES_ORDER) {
         const found = (knockoutMatches[pk] || []).find(mm => mm.n === matchN);
         if (found) {
           matchObj = found;
+          isKnockoutMatch = true;
           break;
         }
       }
     }
+    if (!isKnockoutMatch && isLocked) return;
     if (matchObj && isMatchStarted(matchObj)) return;
     const v = value === "" ? "" : Math.max(0, Math.min(15, parseInt(value) || 0));
     const newPreds = {
